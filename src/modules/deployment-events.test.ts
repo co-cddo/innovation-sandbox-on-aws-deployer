@@ -1,7 +1,11 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
   emitDeploymentSuccess,
+  emitDeploymentFailure,
+  categorizeError,
   type DeploymentSuccessDetail,
+  type DeploymentFailureDetail,
+  type FailureCategory,
 } from './deployment-events.js';
 import type { Logger } from './logger.js';
 
@@ -347,6 +351,534 @@ describe('deployment-events module', () => {
         action: 'created',
         timestamp: '2025-12-03T23:00:00.000Z',
       });
+    });
+  });
+
+  describe('categorizeError', () => {
+    it('should categorize validation errors by error type', () => {
+      const category = categorizeError({
+        errorType: 'ValidationError',
+        errorMessage: 'Template format is incorrect',
+      });
+      expect(category).toBe('validation');
+    });
+
+    it('should categorize validation errors by error code', () => {
+      const category = categorizeError({
+        errorCode: 'InvalidParameterValue',
+        errorMessage: 'Parameter value is invalid',
+      });
+      expect(category).toBe('validation');
+    });
+
+    it('should categorize validation errors by message keywords', () => {
+      const category = categorizeError({
+        errorMessage: 'Invalid template structure detected',
+      });
+      expect(category).toBe('validation');
+    });
+
+    it('should categorize malformed template errors', () => {
+      const category = categorizeError({
+        errorMessage: 'Malformed CloudFormation template',
+      });
+      expect(category).toBe('validation');
+    });
+
+    it('should categorize permission errors by error code', () => {
+      const category = categorizeError({
+        errorCode: 'AccessDenied',
+        errorMessage: 'User does not have permission',
+      });
+      expect(category).toBe('permission');
+    });
+
+    it('should categorize unauthorized errors', () => {
+      const category = categorizeError({
+        errorCode: 'UnauthorizedOperation',
+        errorMessage: 'Not authorized to perform this action',
+      });
+      expect(category).toBe('permission');
+    });
+
+    it('should categorize permission errors by message keywords', () => {
+      const category = categorizeError({
+        errorMessage: 'Access denied for this operation',
+      });
+      expect(category).toBe('permission');
+    });
+
+    it('should categorize forbidden errors', () => {
+      const category = categorizeError({
+        errorMessage: 'Forbidden: insufficient permissions',
+      });
+      expect(category).toBe('permission');
+    });
+
+    it('should categorize resource not found errors', () => {
+      const category = categorizeError({
+        errorCode: 'ResourceNotFoundException',
+        errorMessage: 'The specified resource was not found',
+      });
+      expect(category).toBe('resource');
+    });
+
+    it('should categorize limit exceeded errors', () => {
+      const category = categorizeError({
+        errorCode: 'LimitExceeded',
+        errorMessage: 'Account limit for stacks exceeded',
+      });
+      expect(category).toBe('resource');
+    });
+
+    it('should categorize quota exceeded errors', () => {
+      const category = categorizeError({
+        errorMessage: 'Quota exceeded for VPCs in this region',
+      });
+      expect(category).toBe('resource');
+    });
+
+    it('should categorize insufficient capacity errors', () => {
+      const category = categorizeError({
+        errorMessage: 'Insufficient capacity to fulfill request',
+      });
+      expect(category).toBe('resource');
+    });
+
+    it('should categorize network timeout errors', () => {
+      const category = categorizeError({
+        errorCode: 'RequestTimeout',
+        errorMessage: 'Request timed out',
+      });
+      expect(category).toBe('network');
+    });
+
+    it('should categorize connection errors', () => {
+      const category = categorizeError({
+        errorMessage: 'Connection refused to remote endpoint',
+      });
+      expect(category).toBe('network');
+    });
+
+    it('should categorize network unreachable errors', () => {
+      const category = categorizeError({
+        errorMessage: 'Network unreachable',
+      });
+      expect(category).toBe('network');
+    });
+
+    it('should categorize unknown errors', () => {
+      const category = categorizeError({
+        errorMessage: 'Something unexpected happened',
+      });
+      expect(category).toBe('unknown');
+    });
+
+    it('should handle empty error details', () => {
+      const category = categorizeError({
+        errorMessage: '',
+      });
+      expect(category).toBe('unknown');
+    });
+
+    it('should be case-insensitive for error matching', () => {
+      const category1 = categorizeError({
+        errorMessage: 'VALIDATION ERROR DETECTED',
+      });
+      expect(category1).toBe('validation');
+
+      const category2 = categorizeError({
+        errorMessage: 'Access Denied',
+      });
+      expect(category2).toBe('permission');
+    });
+  });
+
+  describe('emitDeploymentFailure', () => {
+    it('should emit failure event with all fields present', async () => {
+      vi.mocked(emitEvent).mockResolvedValue();
+
+      const detail: Omit<DeploymentFailureDetail, 'timestamp'> = {
+        leaseId: 'lease-12345',
+        accountId: '123456789012',
+        errorMessage: 'Template validation failed',
+        errorType: 'ValidationError',
+        errorCode: 'InvalidTemplate',
+        failureCategory: 'validation',
+        stackName: 'basic-vpc-lease-12345',
+        templateName: 'basic-vpc',
+      };
+
+      await emitDeploymentFailure(detail, mockLogger);
+
+      // Verify emitEvent was called with correct parameters
+      expect(emitEvent).toHaveBeenCalledTimes(1);
+      expect(emitEvent).toHaveBeenCalledWith(
+        'Deployment Failed',
+        expect.objectContaining({
+          ...detail,
+          timestamp: expect.any(String),
+        })
+      );
+
+      // Verify timestamp is ISO 8601 format
+      const callArgs = vi.mocked(emitEvent).mock.calls[0][1] as DeploymentFailureDetail;
+      expect(callArgs.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
+
+      // Verify logging
+      expect(mockLogger.error).toHaveBeenCalledWith('Emitting deployment failure event', {
+        leaseId: 'lease-12345',
+        accountId: '123456789012',
+        errorMessage: 'Template validation failed',
+        errorType: 'ValidationError',
+        errorCode: 'InvalidTemplate',
+        failureCategory: 'validation',
+        hasStackName: true,
+        hasTemplateName: true,
+      });
+
+      expect(mockLogger.info).toHaveBeenCalledWith(
+        'Deployment failure event emitted successfully',
+        {
+          leaseId: 'lease-12345',
+          failureCategory: 'validation',
+        }
+      );
+    });
+
+    it('should emit failure event with only required fields', async () => {
+      vi.mocked(emitEvent).mockResolvedValue();
+
+      const detail: Omit<DeploymentFailureDetail, 'timestamp'> = {
+        leaseId: 'lease-67890',
+        accountId: '987654321098',
+        errorMessage: 'Deployment failed unexpectedly',
+        failureCategory: 'unknown',
+      };
+
+      await emitDeploymentFailure(detail, mockLogger);
+
+      expect(emitEvent).toHaveBeenCalledWith(
+        'Deployment Failed',
+        expect.objectContaining({
+          ...detail,
+          timestamp: expect.any(String),
+        })
+      );
+
+      expect(mockLogger.error).toHaveBeenCalledWith('Emitting deployment failure event', {
+        leaseId: 'lease-67890',
+        accountId: '987654321098',
+        errorMessage: 'Deployment failed unexpectedly',
+        errorType: undefined,
+        errorCode: undefined,
+        failureCategory: 'unknown',
+        hasStackName: false,
+        hasTemplateName: false,
+      });
+    });
+
+    it('should emit failure event with validation category', async () => {
+      vi.mocked(emitEvent).mockResolvedValue();
+
+      const detail: Omit<DeploymentFailureDetail, 'timestamp'> = {
+        leaseId: 'lease-111',
+        accountId: '111111111111',
+        errorMessage: 'Invalid parameter format',
+        failureCategory: 'validation',
+      };
+
+      await emitDeploymentFailure(detail, mockLogger);
+
+      expect(emitEvent).toHaveBeenCalledWith(
+        'Deployment Failed',
+        expect.objectContaining({
+          failureCategory: 'validation',
+        })
+      );
+    });
+
+    it('should emit failure event with permission category', async () => {
+      vi.mocked(emitEvent).mockResolvedValue();
+
+      const detail: Omit<DeploymentFailureDetail, 'timestamp'> = {
+        leaseId: 'lease-222',
+        accountId: '222222222222',
+        errorMessage: 'Access denied',
+        errorCode: 'AccessDenied',
+        failureCategory: 'permission',
+      };
+
+      await emitDeploymentFailure(detail, mockLogger);
+
+      expect(emitEvent).toHaveBeenCalledWith(
+        'Deployment Failed',
+        expect.objectContaining({
+          failureCategory: 'permission',
+        })
+      );
+    });
+
+    it('should emit failure event with resource category', async () => {
+      vi.mocked(emitEvent).mockResolvedValue();
+
+      const detail: Omit<DeploymentFailureDetail, 'timestamp'> = {
+        leaseId: 'lease-333',
+        accountId: '333333333333',
+        errorMessage: 'Stack limit exceeded',
+        failureCategory: 'resource',
+      };
+
+      await emitDeploymentFailure(detail, mockLogger);
+
+      expect(emitEvent).toHaveBeenCalledWith(
+        'Deployment Failed',
+        expect.objectContaining({
+          failureCategory: 'resource',
+        })
+      );
+    });
+
+    it('should emit failure event with network category', async () => {
+      vi.mocked(emitEvent).mockResolvedValue();
+
+      const detail: Omit<DeploymentFailureDetail, 'timestamp'> = {
+        leaseId: 'lease-444',
+        accountId: '444444444444',
+        errorMessage: 'Request timed out',
+        failureCategory: 'network',
+      };
+
+      await emitDeploymentFailure(detail, mockLogger);
+
+      expect(emitEvent).toHaveBeenCalledWith(
+        'Deployment Failed',
+        expect.objectContaining({
+          failureCategory: 'network',
+        })
+      );
+    });
+
+    it('should emit failure event with unknown category', async () => {
+      vi.mocked(emitEvent).mockResolvedValue();
+
+      const detail: Omit<DeploymentFailureDetail, 'timestamp'> = {
+        leaseId: 'lease-555',
+        accountId: '555555555555',
+        errorMessage: 'Mysterious error occurred',
+        failureCategory: 'unknown',
+      };
+
+      await emitDeploymentFailure(detail, mockLogger);
+
+      expect(emitEvent).toHaveBeenCalledWith(
+        'Deployment Failed',
+        expect.objectContaining({
+          failureCategory: 'unknown',
+        })
+      );
+    });
+
+    it('should work without logger provided', async () => {
+      vi.mocked(emitEvent).mockResolvedValue();
+
+      const detail: Omit<DeploymentFailureDetail, 'timestamp'> = {
+        leaseId: 'lease-666',
+        accountId: '666666666666',
+        errorMessage: 'Test error',
+        failureCategory: 'unknown',
+      };
+
+      // Should not throw even without logger
+      await expect(emitDeploymentFailure(detail)).resolves.toBeUndefined();
+
+      expect(emitEvent).toHaveBeenCalledWith(
+        'Deployment Failed',
+        expect.objectContaining({
+          ...detail,
+          timestamp: expect.any(String),
+        })
+      );
+    });
+
+    it('should handle emitEvent errors gracefully with logger', async () => {
+      const emitError = new Error('EventBridge service unavailable');
+      vi.mocked(emitEvent).mockRejectedValue(emitError);
+
+      const detail: Omit<DeploymentFailureDetail, 'timestamp'> = {
+        leaseId: 'lease-777',
+        accountId: '777777777777',
+        errorMessage: 'Original deployment error',
+        failureCategory: 'validation',
+        stackName: 'test-stack',
+      };
+
+      // Should not throw - errors are caught and logged
+      await expect(emitDeploymentFailure(detail, mockLogger)).resolves.toBeUndefined();
+
+      // Verify error was logged
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        'Failed to emit deployment failure event - continuing anyway',
+        {
+          error: 'EventBridge service unavailable',
+          leaseId: 'lease-777',
+          originalError: 'Original deployment error',
+        }
+      );
+
+      // Verify initial error log was still called
+      expect(mockLogger.error).toHaveBeenCalledWith('Emitting deployment failure event', {
+        leaseId: 'lease-777',
+        accountId: '777777777777',
+        errorMessage: 'Original deployment error',
+        errorType: undefined,
+        errorCode: undefined,
+        failureCategory: 'validation',
+        hasStackName: true,
+        hasTemplateName: false,
+      });
+    });
+
+    it('should handle emitEvent errors gracefully without logger', async () => {
+      const emitError = new Error('EventBridge quota exceeded');
+      vi.mocked(emitEvent).mockRejectedValue(emitError);
+
+      // Mock console.error to verify it's called
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      const detail: Omit<DeploymentFailureDetail, 'timestamp'> = {
+        leaseId: 'lease-888',
+        accountId: '888888888888',
+        errorMessage: 'Original error',
+        failureCategory: 'unknown',
+      };
+
+      // Should not throw even without logger
+      await expect(emitDeploymentFailure(detail)).resolves.toBeUndefined();
+
+      // Verify console.error was called with JSON log entry
+      expect(consoleErrorSpy).toHaveBeenCalledTimes(1);
+      const loggedMessage = JSON.parse(consoleErrorSpy.mock.calls[0][0]);
+      expect(loggedMessage).toMatchObject({
+        level: 'ERROR',
+        message: 'Failed to emit deployment failure event',
+        error: 'EventBridge quota exceeded',
+        leaseId: 'lease-888',
+      });
+      expect(loggedMessage.timestamp).toBeDefined();
+
+      consoleErrorSpy.mockRestore();
+    });
+
+    it('should handle non-Error objects thrown by emitEvent', async () => {
+      // Sometimes errors aren't Error instances
+      vi.mocked(emitEvent).mockRejectedValue('String error message');
+
+      const detail: Omit<DeploymentFailureDetail, 'timestamp'> = {
+        leaseId: 'lease-999',
+        accountId: '999999999999',
+        errorMessage: 'Deployment failed',
+        failureCategory: 'unknown',
+      };
+
+      await expect(emitDeploymentFailure(detail, mockLogger)).resolves.toBeUndefined();
+
+      // Verify error was logged as 'Unknown error'
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        'Failed to emit deployment failure event - continuing anyway',
+        {
+          error: 'Unknown error',
+          leaseId: 'lease-999',
+          originalError: 'Deployment failed',
+        }
+      );
+    });
+
+    it('should include leaseId in all log entries', async () => {
+      vi.mocked(emitEvent).mockResolvedValue();
+
+      const detail: Omit<DeploymentFailureDetail, 'timestamp'> = {
+        leaseId: 'lease-correlation-test',
+        accountId: '000000000000',
+        errorMessage: 'Test error',
+        failureCategory: 'validation',
+      };
+
+      await emitDeploymentFailure(detail, mockLogger);
+
+      // Both log calls should include leaseId for correlation
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        'Emitting deployment failure event',
+        expect.objectContaining({ leaseId: 'lease-correlation-test' })
+      );
+
+      expect(mockLogger.info).toHaveBeenCalledWith(
+        'Deployment failure event emitted successfully',
+        expect.objectContaining({ leaseId: 'lease-correlation-test' })
+      );
+    });
+
+    it('should include partial deployment info when available', async () => {
+      vi.mocked(emitEvent).mockResolvedValue();
+
+      const detail: Omit<DeploymentFailureDetail, 'timestamp'> = {
+        leaseId: 'lease-partial',
+        accountId: '123456789012',
+        errorMessage: 'Stack creation failed midway',
+        errorType: 'ResourceError',
+        failureCategory: 'resource',
+        stackName: 'partially-created-stack',
+        // No templateName - partial info
+      };
+
+      await emitDeploymentFailure(detail, mockLogger);
+
+      const callArgs = vi.mocked(emitEvent).mock.calls[0][1] as DeploymentFailureDetail;
+      expect(callArgs.stackName).toBe('partially-created-stack');
+      expect(callArgs.templateName).toBeUndefined();
+      expect(callArgs.leaseId).toBe('lease-partial');
+
+      expect(mockLogger.error).toHaveBeenCalledWith('Emitting deployment failure event', {
+        leaseId: 'lease-partial',
+        accountId: '123456789012',
+        errorMessage: 'Stack creation failed midway',
+        errorType: 'ResourceError',
+        errorCode: undefined,
+        failureCategory: 'resource',
+        hasStackName: true,
+        hasTemplateName: false,
+      });
+    });
+
+    it('should pass complete detail object to emitEvent', async () => {
+      vi.mocked(emitEvent).mockResolvedValue();
+
+      const detail: Omit<DeploymentFailureDetail, 'timestamp'> = {
+        leaseId: 'lease-complete',
+        accountId: '111111111111',
+        errorMessage: 'Complete failure details',
+        errorType: 'CompleteError',
+        errorCode: 'COMPLETE_ERR',
+        failureCategory: 'validation',
+        stackName: 'complete-stack',
+        templateName: 'complete-template',
+      };
+
+      await emitDeploymentFailure(detail, mockLogger);
+
+      // Verify the complete detail object is passed through with timestamp
+      const callArgs = vi.mocked(emitEvent).mock.calls[0][1] as DeploymentFailureDetail;
+      expect(callArgs).toMatchObject({
+        leaseId: 'lease-complete',
+        accountId: '111111111111',
+        errorMessage: 'Complete failure details',
+        errorType: 'CompleteError',
+        errorCode: 'COMPLETE_ERR',
+        failureCategory: 'validation',
+        stackName: 'complete-stack',
+        templateName: 'complete-template',
+      });
+      expect(callArgs.timestamp).toBeDefined();
     });
   });
 });
