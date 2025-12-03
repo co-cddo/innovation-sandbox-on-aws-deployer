@@ -1,0 +1,126 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Innovation Sandbox on AWS Deployer - Lambda Function and Infrastructure'
+
+Parameters:
+  Environment:
+    Type: String
+    Default: 'dev'
+    AllowedValues:
+      - dev
+      - staging
+      - prod
+    Description: 'Deployment environment'
+
+  LeaseTableName:
+    Type: String
+    Description: 'DynamoDB table name for lease lookups'
+    Default: 'isb-leases'
+
+  GithubRepo:
+    Type: String
+    Description: 'GitHub repository owner/name for CloudFormation templates'
+    Default: 'co-cddo/ndx_try_aws_scenarios'
+
+  GithubBranch:
+    Type: String
+    Description: 'GitHub branch to fetch templates from'
+    Default: 'main'
+
+  GithubPath:
+    Type: String
+    Description: 'Path within the repository to scenario templates'
+    Default: 'cloudformation/scenarios'
+
+  TargetRoleName:
+    Type: String
+    Description: 'IAM role name to assume in target sub-accounts'
+    Default: 'ndx_IsbUsersPS'
+
+  ArtifactBucket:
+    Type: String
+    Description: 'S3 bucket name containing Lambda deployment package'
+
+  ArtifactKey:
+    Type: String
+    Description: 'S3 key for Lambda deployment package'
+    Default: 'lambda/handler.zip'
+
+Conditions:
+  IsProd: !Equals [!Ref Environment, 'prod']
+  IsNotProd: !Not [!Condition IsProd]
+
+Resources:
+  # Lambda Function for deploying CloudFormation templates
+  DeployerFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub 'isb-deployer-${Environment}'
+      Description: 'Deploys CloudFormation templates to Innovation Sandbox sub-accounts on lease approval'
+      Runtime: nodejs20.x
+      Architectures:
+        - arm64
+      Handler: handler.handler
+      MemorySize: 256
+      Timeout: 60
+      Role: !GetAtt DeployerRole.Arn
+      Code:
+        S3Bucket: !Ref ArtifactBucket
+        S3Key: !Ref ArtifactKey
+      Environment:
+        Variables:
+          LEASE_TABLE_NAME: !Ref LeaseTableName
+          GITHUB_REPO: !Ref GithubRepo
+          GITHUB_BRANCH: !Ref GithubBranch
+          GITHUB_PATH: !Ref GithubPath
+          TARGET_ROLE_NAME: !Ref TargetRoleName
+          AWS_REGION: !Ref 'AWS::Region'
+          EVENT_SOURCE: 'isb-deployer'
+          LOG_LEVEL: !If [IsProd, 'INFO', 'DEBUG']
+      Tags:
+        - Key: Application
+          Value: 'innovation-sandbox-deployer'
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: ManagedBy
+          Value: 'CloudFormation'
+
+  # IAM Role for Lambda (placeholder - will be fully defined in STORY-020)
+  # This is a basic role definition that will be enhanced with proper permissions
+  DeployerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub 'isb-deployer-role-${Environment}'
+      Description: 'IAM role for Innovation Sandbox Deployer Lambda (to be enhanced in STORY-020)'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+      Tags:
+        - Key: Application
+          Value: 'innovation-sandbox-deployer'
+        - Key: Environment
+          Value: !Ref Environment
+
+Outputs:
+  FunctionArn:
+    Description: 'ARN of the deployer Lambda function'
+    Value: !GetAtt DeployerFunction.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-FunctionArn'
+
+  FunctionName:
+    Description: 'Name of the deployer Lambda function'
+    Value: !Ref DeployerFunction
+    Export:
+      Name: !Sub '${AWS::StackName}-FunctionName'
+
+  RoleArn:
+    Description: 'ARN of the Lambda execution role'
+    Value: !GetAtt DeployerRole.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-RoleArn'
