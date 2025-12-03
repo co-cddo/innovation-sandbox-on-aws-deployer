@@ -1,0 +1,184 @@
+version: "6.0.0"
+project_name: "innovation-sandbox-on-aws-deployer"
+project_level: 3
+current_sprint: 1
+sprint_plan_path: "docs/sprint-plan-innovation-sandbox-on-aws-deployer-2025-12-03.md"
+
+sprints:
+  - sprint_number: 1
+    start_date: "2025-12-03"
+    end_date: "2025-12-23"
+    capacity_points: 135
+    committed_points: 93
+    completed_points: 11
+    status: "in_progress"
+    goal: "Deliver complete Innovation Sandbox Deployer with automated template deployment to sub-accounts on lease approval"
+    stories:
+      # EPIC-001: Event Processing
+      - story_id: "STORY-001"
+        title: "Project Setup and Configuration Module"
+        points: 5
+        status: "completed"
+        assigned_to: null
+        epic: "EPIC-001"
+        completed_at: "2025-12-03"
+      - story_id: "STORY-002"
+        title: "Logger Module Implementation"
+        points: 3
+        status: "completed"
+        assigned_to: null
+        epic: "EPIC-001"
+        completed_at: "2025-12-03"
+      - story_id: "STORY-003"
+        title: "Lambda Handler Entry Point"
+        points: 5
+        status: "not_started"
+        assigned_to: null
+        epic: "EPIC-001"
+      - story_id: "STORY-004"
+        title: "Event Parser Module"
+        points: 3
+        status: "completed"
+        assigned_to: null
+        epic: "EPIC-001"
+        completed_at: "2025-12-03"
+
+      # EPIC-002: Template Management
+      - story_id: "STORY-005"
+        title: "GitHub URL Construction"
+        points: 2
+        status: "not_started"
+        assigned_to: null
+        epic: "EPIC-002"
+      - story_id: "STORY-006"
+        title: "Template Fetcher Module"
+        points: 3
+        status: "not_started"
+        assigned_to: null
+        epic: "EPIC-002"
+      - story_id: "STORY-007"
+        title: "Handle Missing Templates (Graceful No-Op)"
+        points: 2
+        status: "not_started"
+        assigned_to: null
+        epic: "EPIC-002"
+      - story_id: "STORY-008"
+        title: "Template Validation"
+        points: 3
+        status: "not_started"
+        assigned_to: null
+        epic: "EPIC-002"
+
+      # EPIC-003: Cross-Account Deployment
+      - story_id: "STORY-009"
+        title: "Role Assumer Module"
+        points: 5
+        status: "not_started"
+        assigned_to: null
+        epic: "EPIC-003"
+      - story_id: "STORY-010"
+        title: "Stack Name Generation"
+        points: 2
+        status: "not_started"
+        assigned_to: null
+        epic: "EPIC-003"
+      - story_id: "STORY-011"
+        title: "Stack Deployer Module - Create Stack"
+        points: 5
+        status: "not_started"
+        assigned_to: null
+        epic: "EPIC-003"
+      - story_id: "STORY-012"
+        title: "Idempotent Stack Handling"
+        points: 3
+        status: "not_started"
+        assigned_to: null
+        epic: "EPIC-003"
+
+      # EPIC-004: Parameter Enrichment
+      - story_id: "STORY-013"
+        title: "Lease Lookup Module"
+        points: 3
+        status: "not_started"
+        assigned_to: null
+        epic: "EPIC-004"
+      - story_id: "STORY-014"
+        title: "Parameter Mapping"
+        points: 3
+        status: "not_started"
+        assigned_to: null
+        epic: "EPIC-004"
+      - story_id: "STORY-015"
+        title: "Inject Parameters into Stack Deployment"
+        points: 2
+        status: "not_started"
+        assigned_to: null
+        epic: "EPIC-004"
+
+      # EPIC-005: Status Notifications
+      - story_id: "STORY-016"
+        title: "Event Emitter Module"
+        points: 2
+        status: "not_started"
+        assigned_to: null
+        epic: "EPIC-005"
+      - story_id: "STORY-017"
+        title: "Emit Success Event"
+        points: 2
+        status: "not_started"
+        assigned_to: null
+        epic: "EPIC-005"
+      - story_id: "STORY-018"
+        title: "Emit Failure Event"
+        points: 3
+        status: "not_started"
+        assigned_to: null
+        epic: "EPIC-005"
+
+      # EPIC-006: Infrastructure & Deployment
+      - story_id: "STORY-019"
+        title: "CloudFormation Template - Lambda Function"
+        points: 5
+        status: "not_started"
+        assigned_to: null
+        epic: "EPIC-006"
+      - story_id: "STORY-020"
+        title: "CloudFormation Template - IAM Role"
+        points: 5
+        status: "not_started"
+        assigned_to: null
+        epic: "EPIC-006"
+      - story_id: "STORY-021"
+        title: "CloudFormation Template - EventBridge Rule"
+        points: 3
+        status: "not_started"
+        assigned_to: null
+        epic: "EPIC-006"
+      - story_id: "STORY-022"
+        title: "CloudFormation Template - Parameters"
+        points: 2
+        status: "not_started"
+        assigned_to: null
+        epic: "EPIC-006"
+      - story_id: "STORY-023"
+        title: "Documentation - README"
+        points: 5
+        status: "not_started"
+        assigned_to: null
+        epic: "EPIC-006"
+      - story_id: "STORY-024"
+        title: "CI/CD Pipeline - GitHub Actions"
+        points: 5
+        status: "not_started"
+        assigned_to: null
+        epic: "EPIC-006"
+
+velocity:
+  sprint_1: null  # Will be filled when sprint completes
+  rolling_average: null
+
+team:
+  size: 3
+  sprint_length_weeks: 3
+  capacity_per_sprint: 135
+  experience_level: "senior"
