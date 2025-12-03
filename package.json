@@ -30,6 +30,7 @@
     "node": ">=20.0.0"
   },
   "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
     "@types/node": "^20.10.0",
     "@typescript-eslint/eslint-plugin": "^6.13.0",
     "@typescript-eslint/parser": "^6.13.0",
@@ -47,6 +48,6 @@
     "@aws-sdk/client-eventbridge": "^3.460.0",
     "@aws-sdk/client-sts": "^3.460.0",
     "@aws-sdk/lib-dynamodb": "^3.460.0",
-    "js-yaml": "^4.1.0"
+    "js-yaml": "^4.1.1"
   }
 }
