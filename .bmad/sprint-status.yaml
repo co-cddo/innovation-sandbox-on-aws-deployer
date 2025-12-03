@@ -10,7 +10,7 @@ sprints:
     end_date: "2025-12-23"
     capacity_points: 135
     committed_points: 93
-    completed_points: 37
+    completed_points: 42
     status: "in_progress"
     goal: "Deliver complete Innovation Sandbox Deployer with automated template deployment to sub-accounts on lease approval"
     stories:
@@ -152,9 +152,10 @@ sprints:
       - story_id: "STORY-020"
         title: "CloudFormation Template - IAM Role"
         points: 5
-        status: "not_started"
+        status: "completed"
         assigned_to: null
         epic: "EPIC-006"
+        completed_at: "2025-12-03"
       - story_id: "STORY-021"
         title: "CloudFormation Template - EventBridge Rule"
         points: 3
@@ -191,4 +192,4 @@ team:
   capacity_per_sprint: 135
   experience_level: "senior"
 
-last_updated: "2025-12-03T23:04:40Z"
+last_updated: "2025-12-03T23:09:19Z"
