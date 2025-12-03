@@ -1,0 +1,22 @@
+# BMAD Method v6 - Project Configuration
+# Generated: 2025-12-03
+
+project_name: "innovation-sandbox-on-aws-deployer"
+project_type: "infrastructure"
+project_level: 3
+
+output_folder: "docs"
+
+bmm:
+  workflow_status_file: "docs/bmm-workflow-status.yaml"
+  sprint_status_file: "docs/sprint-status.yaml"
+
+paths:
+  docs: "docs"
+  stories: "docs/stories"
+  tests: "tests"
+
+# Level 3 Requirements:
+# - PRD: required
+# - Architecture: required
+# - Tech-spec: optional (can be part of architecture)

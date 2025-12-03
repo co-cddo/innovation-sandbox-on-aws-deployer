@@ -1,0 +1,25 @@
+version: "6.0.0"
+project_name: "innovation-sandbox-on-aws-deployer"
+project_level: 3
+current_phase: "implementation"
+last_updated: "2025-12-03"
+
+workflows:
+  product-brief:
+    status: "docs/product-brief-innovation-sandbox-on-aws-deployer-2025-12-03.md"
+    completed_at: "2025-12-03"
+  prd:
+    status: "docs/prd-innovation-sandbox-on-aws-deployer-2025-12-03.md"
+    completed_at: "2025-12-03"
+  architecture:
+    status: "docs/architecture-innovation-sandbox-on-aws-deployer-2025-12-03.md"
+    completed_at: "2025-12-03"
+  sprint-planning:
+    status: "docs/sprint-plan-innovation-sandbox-on-aws-deployer-2025-12-03.md"
+    completed_at: "2025-12-03"
+  implementation:
+    status: "not_started"
+    current_story: null
+
+next_workflow: "dev-story"
+next_workflow_args: "STORY-001"
