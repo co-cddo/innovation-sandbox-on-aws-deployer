@@ -10,7 +10,7 @@ sprints:
     end_date: "2025-12-23"
     capacity_points: 135
     committed_points: 93
-    completed_points: 17
+    completed_points: 20
     status: "in_progress"
     goal: "Deliver complete Innovation Sandbox Deployer with automated template deployment to sub-accounts on lease approval"
     stories:
@@ -54,9 +54,10 @@ sprints:
       - story_id: "STORY-006"
         title: "Template Fetcher Module"
         points: 3
-        status: "not_started"
+        status: "completed"
         assigned_to: null
         epic: "EPIC-002"
+        completed_at: "2025-12-03"
       - story_id: "STORY-007"
         title: "Handle Missing Templates (Graceful No-Op)"
         points: 2
