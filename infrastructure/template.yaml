@@ -36,6 +36,11 @@ Parameters:
     Description: 'IAM role name to assume in target sub-accounts'
     Default: 'ndx_IsbUsersPS'
 
+  EventSource:
+    Type: String
+    Default: 'innovation-sandbox'
+    Description: 'Event source to filter for lease approved events'
+
   ArtifactBucket:
     Type: String
     Description: 'S3 bucket name containing Lambda deployment package'
@@ -146,6 +151,40 @@ Resources:
         - Key: Environment
           Value: !Ref Environment
 
+  # EventBridge Rule for Lease Approved Events
+  # Filters events from the innovation-sandbox source with detail-type 'Lease Approved'
+  # and triggers the DeployerFunction Lambda
+  LeaseApprovedRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: !Sub 'isb-deployer-lease-approved-${Environment}'
+      Description: 'Triggers deployment when a lease is approved'
+      EventBusName: default
+      State: ENABLED
+      EventPattern:
+        source:
+          - !Ref EventSource
+        detail-type:
+          - 'Lease Approved'
+      Targets:
+        - Id: DeployerLambdaTarget
+          Arn: !GetAtt DeployerFunction.Arn
+      Tags:
+        - Key: Application
+          Value: 'innovation-sandbox-deployer'
+        - Key: Environment
+          Value: !Ref Environment
+
+  # Lambda Permission for EventBridge Invocation
+  # Allows the EventBridge rule to invoke the Lambda function
+  EventBridgeInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref DeployerFunction
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt LeaseApprovedRule.Arn
+
 Outputs:
   FunctionArn:
     Description: 'ARN of the deployer Lambda function'
@@ -164,3 +203,15 @@ Outputs:
     Value: !GetAtt DeployerRole.Arn
     Export:
       Name: !Sub '${AWS::StackName}-RoleArn'
+
+  LeaseApprovedRuleArn:
+    Description: 'ARN of the EventBridge rule for lease approved events'
+    Value: !GetAtt LeaseApprovedRule.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-LeaseApprovedRuleArn'
+
+  LeaseApprovedRuleName:
+    Description: 'Name of the EventBridge rule for lease approved events'
+    Value: !Ref LeaseApprovedRule
+    Export:
+      Name: !Sub '${AWS::StackName}-LeaseApprovedRuleName'
