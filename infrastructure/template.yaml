@@ -1,6 +1,56 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: 'Innovation Sandbox on AWS Deployer - Lambda Function and Infrastructure'
 
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: 'Environment Configuration'
+        Parameters:
+          - Environment
+      - Label:
+          default: 'Data Storage'
+        Parameters:
+          - LeaseTableName
+      - Label:
+          default: 'GitHub Repository Configuration'
+        Parameters:
+          - GithubRepo
+          - GithubBranch
+          - GithubPath
+      - Label:
+          default: 'Cross-Account Access'
+        Parameters:
+          - TargetRoleName
+      - Label:
+          default: 'Event Configuration'
+        Parameters:
+          - EventSource
+      - Label:
+          default: 'Deployment Artifacts'
+        Parameters:
+          - ArtifactBucket
+          - ArtifactKey
+    ParameterLabels:
+      Environment:
+        default: 'Deployment Environment'
+      LeaseTableName:
+        default: 'Lease DynamoDB Table Name'
+      GithubRepo:
+        default: 'GitHub Repository (owner/name)'
+      GithubBranch:
+        default: 'GitHub Branch'
+      GithubPath:
+        default: 'GitHub Path to Templates'
+      TargetRoleName:
+        default: 'Target IAM Role Name'
+      EventSource:
+        default: 'EventBridge Source Filter'
+      ArtifactBucket:
+        default: 'S3 Artifact Bucket'
+      ArtifactKey:
+        default: 'S3 Artifact Key'
+
 Parameters:
   Environment:
     Type: String
@@ -9,46 +59,79 @@ Parameters:
       - dev
       - staging
       - prod
-    Description: 'Deployment environment'
+    Description: 'Deployment environment (dev/staging/prod). Controls log level and resource naming.'
+    ConstraintDescription: 'Must be one of: dev, staging, prod'
 
   LeaseTableName:
     Type: String
-    Description: 'DynamoDB table name for lease lookups'
+    Description: 'DynamoDB table name for lease data lookups. Must be an existing table accessible by the Lambda function.'
     Default: 'isb-leases'
+    MinLength: 3
+    MaxLength: 255
+    AllowedPattern: '[a-zA-Z0-9_.-]+'
+    ConstraintDescription: 'Must be a valid DynamoDB table name (3-255 chars, alphanumeric, dots, dashes, underscores)'
 
   GithubRepo:
     Type: String
-    Description: 'GitHub repository owner/name for CloudFormation templates'
+    Description: 'GitHub repository in owner/name format where CloudFormation scenario templates are stored'
     Default: 'co-cddo/ndx_try_aws_scenarios'
+    MinLength: 3
+    MaxLength: 255
+    AllowedPattern: '[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+'
+    ConstraintDescription: 'Must be in format owner/repository (e.g., co-cddo/ndx_try_aws_scenarios)'
 
   GithubBranch:
     Type: String
-    Description: 'GitHub branch to fetch templates from'
+    Description: 'GitHub branch to fetch templates from. Defaults to main branch.'
     Default: 'main'
+    MinLength: 1
+    MaxLength: 255
+    AllowedPattern: '[a-zA-Z0-9_./+-]+'
+    ConstraintDescription: 'Must be a valid Git branch name (alphanumeric, dots, slashes, dashes, underscores, plus signs)'
 
   GithubPath:
     Type: String
-    Description: 'Path within the repository to scenario templates'
+    Description: 'Path within the repository to scenario templates directory (without leading/trailing slashes)'
     Default: 'cloudformation/scenarios'
+    MinLength: 1
+    MaxLength: 255
+    AllowedPattern: '[a-zA-Z0-9_./+-]+'
+    ConstraintDescription: 'Must be a valid path (alphanumeric, dots, slashes, dashes, underscores, plus signs)'
 
   TargetRoleName:
     Type: String
-    Description: 'IAM role name to assume in target sub-accounts'
+    Description: 'IAM role name to assume in target sub-accounts for CloudFormation deployment operations'
     Default: 'ndx_IsbUsersPS'
+    MinLength: 1
+    MaxLength: 64
+    AllowedPattern: '[a-zA-Z0-9+=,.@_-]+'
+    ConstraintDescription: 'Must be a valid IAM role name (1-64 chars, alphanumeric and +=,.@_-)'
 
   EventSource:
     Type: String
     Default: 'innovation-sandbox'
-    Description: 'Event source to filter for lease approved events'
+    Description: 'EventBridge event source to filter for lease approved events. Must match the source field in incoming events.'
+    MinLength: 1
+    MaxLength: 255
+    AllowedPattern: '[a-zA-Z0-9_.-]+'
+    ConstraintDescription: 'Must be a valid EventBridge source name (alphanumeric, dots, dashes, underscores)'
 
   ArtifactBucket:
     Type: String
-    Description: 'S3 bucket name containing Lambda deployment package'
+    Description: 'S3 bucket name containing the Lambda deployment package (.zip file). Must be in the same region as the stack.'
+    MinLength: 3
+    MaxLength: 63
+    AllowedPattern: '[a-z0-9][a-z0-9.-]*[a-z0-9]'
+    ConstraintDescription: 'Must be a valid S3 bucket name (3-63 chars, lowercase alphanumeric, dots, dashes, start/end with alphanumeric)'
 
   ArtifactKey:
     Type: String
-    Description: 'S3 key for Lambda deployment package'
+    Description: 'S3 object key for the Lambda deployment package (.zip file)'
     Default: 'lambda/handler.zip'
+    MinLength: 1
+    MaxLength: 1024
+    AllowedPattern: '[a-zA-Z0-9_./+-]+'
+    ConstraintDescription: 'Must be a valid S3 object key (alphanumeric, dots, slashes, dashes, underscores, plus signs)'
 
 Conditions:
   IsProd: !Equals [!Ref Environment, 'prod']
