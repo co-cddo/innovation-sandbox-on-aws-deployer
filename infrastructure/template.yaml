@@ -84,13 +84,17 @@ Resources:
         - Key: ManagedBy
           Value: 'CloudFormation'
 
-  # IAM Role for Lambda (placeholder - will be fully defined in STORY-020)
-  # This is a basic role definition that will be enhanced with proper permissions
+  # IAM Role for Lambda Execution
+  # Follows least privilege principle with specific permissions for:
+  # - DynamoDB read access for lease lookups
+  # - STS AssumeRole for cross-account deployment
+  # - EventBridge PutEvents for status notifications
+  # - CloudWatch Logs via AWSLambdaBasicExecutionRole
   DeployerRole:
     Type: AWS::IAM::Role
     Properties:
       RoleName: !Sub 'isb-deployer-role-${Environment}'
-      Description: 'IAM role for Innovation Sandbox Deployer Lambda (to be enhanced in STORY-020)'
+      Description: 'IAM role for Innovation Sandbox Deployer Lambda'
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -100,6 +104,42 @@ Resources:
             Action: 'sts:AssumeRole'
       ManagedPolicyArns:
         - 'arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+      Policies:
+        # DynamoDB read-only access for lease table lookups
+        - PolicyName: DynamoDBReadAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'dynamodb:GetItem'
+                  - 'dynamodb:Query'
+                Resource: !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${LeaseTableName}'
+
+        # STS permissions for cross-account role assumption
+        # Allows assuming the target role in sub-accounts for CloudFormation deployment
+        - PolicyName: STSAssumeRoleAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'sts:AssumeRole'
+                Resource: !Sub 'arn:aws:iam::*:role/${TargetRoleName}'
+                # Note: Wildcard (*) allows assuming role in any account
+                # This is necessary for multi-account sandbox architecture
+                # Consider adding aws:PrincipalOrgID condition for additional security
+
+        # EventBridge permissions for deployment status events
+        - PolicyName: EventBridgePutEvents
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'events:PutEvents'
+                Resource: !Sub 'arn:aws:events:${AWS::Region}:${AWS::AccountId}:event-bus/default'
+
       Tags:
         - Key: Application
           Value: 'innovation-sandbox-deployer'
