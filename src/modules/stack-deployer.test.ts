@@ -116,7 +116,7 @@ describe('stack-deployer', () => {
         StackName: 'test-stack',
         TemplateBody: mockTemplateBody,
         Parameters: undefined,
-        Capabilities: ['CAPABILITY_NAMED_IAM'],
+        Capabilities: ['CAPABILITY_NAMED_IAM', 'CAPABILITY_AUTO_EXPAND'],
       });
     });
 
@@ -137,7 +137,7 @@ describe('stack-deployer', () => {
 
       expect(CreateStackCommand).toHaveBeenCalledWith(
         expect.objectContaining({
-          Capabilities: ['CAPABILITY_NAMED_IAM'],
+          Capabilities: ['CAPABILITY_NAMED_IAM', 'CAPABILITY_AUTO_EXPAND'],
         })
       );
     });
@@ -475,7 +475,7 @@ describe('stack-deployer', () => {
       expect(CreateStackCommand).toHaveBeenCalledWith(
         expect.objectContaining({
           TemplateBody: complexTemplate,
-          Capabilities: ['CAPABILITY_NAMED_IAM'],
+          Capabilities: ['CAPABILITY_NAMED_IAM', 'CAPABILITY_AUTO_EXPAND'],
         })
       );
     });

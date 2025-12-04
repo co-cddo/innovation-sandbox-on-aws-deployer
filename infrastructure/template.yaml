@@ -125,12 +125,12 @@ Parameters:
 
   TargetRoleName:
     Type: String
-    Description: 'IAM role name to assume in target sub-accounts for CloudFormation deployment operations'
-    Default: 'ndx_IsbUsersPS'
+    Description: 'IAM role name to assume in target sub-accounts. Must match InnovationSandbox-{namespace}* pattern to be exempt from SCPs. Deploy stackset-sandbox-role.yaml to create this role.'
+    Default: 'InnovationSandbox-ndx-DeployerRole'
     MinLength: 1
     MaxLength: 64
-    AllowedPattern: '[a-zA-Z0-9+=,.@_-]+'
-    ConstraintDescription: 'Must be a valid IAM role name (1-64 chars, alphanumeric and +=,.@_-)'
+    AllowedPattern: 'InnovationSandbox-[a-zA-Z0-9]+-[a-zA-Z0-9_-]+'
+    ConstraintDescription: 'Must match InnovationSandbox-{namespace}-* pattern to be exempt from SCPs'
 
   EventSource:
     Type: String

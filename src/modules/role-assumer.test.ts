@@ -20,7 +20,7 @@ vi.mock('./config.js', async () => {
   return {
     ...actual,
     getConfig: vi.fn(() => ({
-      targetRoleName: 'ndx_IsbUsersPS',
+      targetRoleName: 'InnovationSandbox-ndx-DeployerRole',
       awsRegion: 'eu-west-2',
       githubRepo: 'co-cddo/ndx_try_aws_scenarios',
       githubBranch: 'main',
@@ -92,7 +92,7 @@ describe('role-assumer', () => {
       await assumeRole('987654321098');
 
       expect(AssumeRoleCommand).toHaveBeenCalledWith({
-        RoleArn: 'arn:aws:iam::987654321098:role/ndx_IsbUsersPS',
+        RoleArn: 'arn:aws:iam::987654321098:role/InnovationSandbox-ndx-DeployerRole',
         RoleSessionName: 'innovation-sandbox-deployer',
         DurationSeconds: 3600,
       });
@@ -153,7 +153,7 @@ describe('role-assumer', () => {
       await assumeRole('111111111111');
       expect(AssumeRoleCommand).toHaveBeenCalledWith(
         expect.objectContaining({
-          RoleArn: 'arn:aws:iam::111111111111:role/ndx_IsbUsersPS',
+          RoleArn: 'arn:aws:iam::111111111111:role/InnovationSandbox-ndx-DeployerRole',
         })
       );
 
@@ -161,7 +161,7 @@ describe('role-assumer', () => {
       await assumeRole('222222222222');
       expect(AssumeRoleCommand).toHaveBeenCalledWith(
         expect.objectContaining({
-          RoleArn: 'arn:aws:iam::222222222222:role/ndx_IsbUsersPS',
+          RoleArn: 'arn:aws:iam::222222222222:role/InnovationSandbox-ndx-DeployerRole',
         })
       );
     });
@@ -287,7 +287,7 @@ describe('role-assumer', () => {
       mockSend.mockRejectedValue(stsError);
 
       await expect(assumeRole('123456789012')).rejects.toThrow(
-        'arn:aws:iam::123456789012:role/ndx_IsbUsersPS'
+        'arn:aws:iam::123456789012:role/InnovationSandbox-ndx-DeployerRole'
       );
     });
 

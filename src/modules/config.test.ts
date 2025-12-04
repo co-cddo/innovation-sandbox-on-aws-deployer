@@ -135,7 +135,7 @@ describe('config module', () => {
       expect(DEFAULTS.GITHUB_REPO).toBe('co-cddo/ndx_try_aws_scenarios');
       expect(DEFAULTS.GITHUB_BRANCH).toBe('main');
       expect(DEFAULTS.GITHUB_PATH).toBe('cloudformation/scenarios');
-      expect(DEFAULTS.TARGET_ROLE_NAME).toBe('ndx_IsbUsersPS');
+      expect(DEFAULTS.TARGET_ROLE_NAME).toBe('InnovationSandbox-ndx-DeployerRole');
       expect(DEFAULTS.AWS_REGION).toBe('eu-west-2');
       expect(DEFAULTS.EVENT_SOURCE).toBe('isb-deployer');
       expect(DEFAULTS.LOG_LEVEL).toBe('INFO');

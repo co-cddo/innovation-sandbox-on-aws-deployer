@@ -53,7 +53,7 @@ export interface DeployStackResult {
  * This function:
  * - Creates a new CloudFormation client with the provided credentials
  * - Calls CreateStack with the template, stack name, and parameters
- * - Enables CAPABILITY_NAMED_IAM to allow creation of IAM resources
+ * - Enables CAPABILITY_NAMED_IAM and CAPABILITY_AUTO_EXPAND for IAM and SAM/nested stack support
  * - Returns the stack ID on successful creation
  * - Handles common CloudFormation errors with descriptive messages
  *
@@ -93,8 +93,8 @@ export async function deployStack(input: DeployStackInput): Promise<DeployStackR
       StackName: stackName,
       TemplateBody: templateBody,
       Parameters: parameters,
-      // Enable IAM resource creation capability
-      Capabilities: ['CAPABILITY_NAMED_IAM'],
+      // Enable IAM resource creation and SAM/nested stack expansion
+      Capabilities: ['CAPABILITY_NAMED_IAM', 'CAPABILITY_AUTO_EXPAND'],
     });
 
     const response = await client.send(command);

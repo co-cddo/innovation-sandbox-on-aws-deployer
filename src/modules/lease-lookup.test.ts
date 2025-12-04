@@ -20,7 +20,7 @@ vi.mock('./config.js', async () => {
   return {
     ...actual,
     getConfig: vi.fn(() => ({
-      targetRoleName: 'ndx_IsbUsersPS',
+      targetRoleName: 'InnovationSandbox-ndx-DeployerRole',
       awsRegion: 'eu-west-2',
       githubRepo: 'co-cddo/ndx_try_aws_scenarios',
       githubBranch: 'main',

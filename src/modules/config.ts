@@ -7,7 +7,7 @@ const DEFAULTS = {
   GITHUB_REPO: 'co-cddo/ndx_try_aws_scenarios',
   GITHUB_BRANCH: 'main',
   GITHUB_PATH: 'cloudformation/scenarios',
-  TARGET_ROLE_NAME: 'ndx_IsbUsersPS',
+  TARGET_ROLE_NAME: 'InnovationSandbox-ndx-DeployerRole',
   AWS_REGION: 'eu-west-2',
   EVENT_SOURCE: 'isb-deployer',
   LOG_LEVEL: 'INFO' as LogLevel,
@@ -48,7 +48,7 @@ function getOptionalEnv(name: string, defaultValue: string): string {
  * - GITHUB_REPO: Repository for templates (default: co-cddo/ndx_try_aws_scenarios)
  * - GITHUB_BRANCH: Branch to fetch from (default: main)
  * - GITHUB_PATH: Path to templates (default: cloudformation/scenarios)
- * - TARGET_ROLE_NAME: IAM role for cross-account (default: ndx_IsbUsersPS)
+ * - TARGET_ROLE_NAME: IAM role for cross-account (default: InnovationSandbox-ndx-DeployerRole)
  * - AWS_REGION: AWS region (default: eu-west-2)
  * - EVENT_SOURCE: EventBridge source (default: isb-deployer)
  * - LOG_LEVEL: Logging level (default: INFO)
