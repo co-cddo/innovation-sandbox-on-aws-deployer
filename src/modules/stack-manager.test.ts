@@ -136,11 +136,11 @@ describe('stack-manager', () => {
       });
     });
 
-    it('should create CloudFormation client with correct credentials', async () => {
+    it('should create CloudFormation client with correct credentials and us-east-1 region', async () => {
       mockSend.mockResolvedValue({
         Stacks: [
           {
-            StackId: 'arn:aws:cloudformation:us-west-2:123456789012:stack/test-stack/abc123',
+            StackId: 'arn:aws:cloudformation:us-east-1:123456789012:stack/test-stack/abc123',
             StackName: 'test-stack',
             StackStatus: 'CREATE_COMPLETE',
           },
@@ -150,6 +150,7 @@ describe('stack-manager', () => {
       await getStackStatus('test-stack', mockCredentials);
 
       expect(CloudFormationClient).toHaveBeenCalledWith({
+        region: 'us-east-1',
         credentials: {
           accessKeyId: mockCredentials.accessKeyId,
           secretAccessKey: mockCredentials.secretAccessKey,
@@ -797,8 +798,8 @@ describe('stack-manager', () => {
       expect(result.action).toBe('skipped');
     });
 
-    it('should use correct credentials for delete operation', async () => {
-      const mockStackId = 'arn:aws:cloudformation:us-west-2:123456789012:stack/test-stack/abc123';
+    it('should use correct credentials and us-east-1 region for delete operation', async () => {
+      const mockStackId = 'arn:aws:cloudformation:us-east-1:123456789012:stack/test-stack/abc123';
 
       mockSend
         .mockResolvedValueOnce({
@@ -824,8 +825,9 @@ describe('stack-manager', () => {
 
       await deployOrUpdateStack(input);
 
-      // Verify CloudFormation client was created with correct credentials
+      // Verify CloudFormation client was created with correct credentials and region
       expect(CloudFormationClient).toHaveBeenCalledWith({
+        region: 'us-east-1',
         credentials: {
           accessKeyId: mockCredentials.accessKeyId,
           secretAccessKey: mockCredentials.secretAccessKey,

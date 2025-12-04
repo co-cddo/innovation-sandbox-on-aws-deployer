@@ -1,5 +1,6 @@
 import { CloudFormationClient, CreateStackCommand } from '@aws-sdk/client-cloudformation';
 import type { AssumedRoleCredentials } from './role-assumer.js';
+import { DEFAULTS } from './config.js';
 
 /**
  * Custom error class for stack deployment failures
@@ -83,7 +84,9 @@ export async function deployStack(input: DeployStackInput): Promise<DeployStackR
 
   // Create CloudFormation client with assumed role credentials
   // Note: Do NOT use singleton pattern here - create fresh client per call with specific credentials
+  // Deploy to us-east-1 for access to features not available in all regions
   const client = new CloudFormationClient({
+    region: DEFAULTS.DEPLOY_REGION,
     credentials: {
       accessKeyId: credentials.accessKeyId,
       secretAccessKey: credentials.secretAccessKey,
