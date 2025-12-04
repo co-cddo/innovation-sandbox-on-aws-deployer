@@ -157,7 +157,7 @@ jobs:
         run: |
           aws cloudformation deploy \
             --template-file infrastructure/template.yaml \
-            --stack-name isb-deployer-prod \
+            --stack-name isb-deployer \
             --parameter-overrides \
               Environment=prod \
               CreateLeaseTable=false \
