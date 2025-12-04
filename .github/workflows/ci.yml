@@ -149,23 +149,33 @@ jobs:
           zip -r ../lambda-function.zip .
           cd ..
 
+      - name: Upload Lambda to S3
+        run: |
+          aws s3 cp lambda-function.zip s3://${{ vars.ARTIFACT_BUCKET }}/lambda/handler.zip
+
       - name: Deploy CloudFormation stack
         run: |
           aws cloudformation deploy \
             --template-file infrastructure/template.yaml \
-            --stack-name isb-deployer \
+            --stack-name isb-deployer-prod \
             --parameter-overrides \
+              Environment=prod \
+              CreateLeaseTable=false \
+              CreateArtifactBucket=false \
               LeaseTableName=${{ vars.LEASE_TABLE_NAME }} \
-              TargetRoleName=${{ vars.TARGET_ROLE_NAME || 'ndx_IsbUsersPS' }} \
-              GitHubRepo=${{ vars.GITHUB_REPO || 'co-cddo/ndx_try_aws_scenarios' }} \
-              GitHubBranch=${{ vars.GITHUB_BRANCH || 'main' }} \
-              GitHubPath=${{ vars.GITHUB_PATH || 'cloudformation/scenarios' }} \
-            --capabilities CAPABILITY_IAM \
+              ArtifactBucket=${{ vars.ARTIFACT_BUCKET }} \
+              ArtifactKey=lambda/handler.zip \
+              TargetRoleName=${{ vars.TARGET_ROLE_NAME || 'InnovationSandbox-ndx-DeployerRole' }} \
+              GithubRepo=${{ vars.GITHUB_REPO || 'co-cddo/ndx_try_aws_scenarios' }} \
+              GithubBranch=${{ vars.GITHUB_BRANCH || 'main' }} \
+              GithubPath=${{ vars.GITHUB_PATH || 'cloudformation/scenarios' }} \
+            --capabilities CAPABILITY_NAMED_IAM \
             --no-fail-on-empty-changeset
 
       - name: Update Lambda function code
         run: |
           aws lambda update-function-code \
-            --function-name isb-deployer \
-            --zip-file fileb://lambda-function.zip \
+            --function-name isb-deployer-prod \
+            --s3-bucket ${{ vars.ARTIFACT_BUCKET }} \
+            --s3-key lambda/handler.zip \
             --publish
