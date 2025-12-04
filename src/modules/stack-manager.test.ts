@@ -18,16 +18,19 @@ import type { DeployStackInput } from './stack-deployer.js';
 
 // Mock the AWS SDK
 vi.mock('@aws-sdk/client-cloudformation', () => {
-  const actualDescribeCommand = vi.fn();
-  const actualDeleteCommand = vi.fn();
-  const actualCreateCommand = vi.fn();
   return {
-    CloudFormationClient: vi.fn(() => ({
-      send: vi.fn(),
-    })),
-    DescribeStacksCommand: actualDescribeCommand,
-    DeleteStackCommand: actualDeleteCommand,
-    CreateStackCommand: actualCreateCommand,
+    CloudFormationClient: vi.fn(function () {
+      return { send: vi.fn() };
+    }),
+    DescribeStacksCommand: vi.fn(function (input: unknown) {
+      return { input };
+    }),
+    DeleteStackCommand: vi.fn(function (input: unknown) {
+      return { input };
+    }),
+    CreateStackCommand: vi.fn(function (input: unknown) {
+      return { input };
+    }),
   };
 });
 
@@ -70,7 +73,9 @@ describe('stack-manager', () => {
     mockCFClient = {
       send: mockSend,
     };
-    vi.mocked(CloudFormationClient).mockImplementation(() => mockCFClient);
+    vi.mocked(CloudFormationClient).mockImplementation(function () {
+      return mockCFClient;
+    });
 
     // Clear console.log and console.warn spies
     vi.spyOn(console, 'log').mockImplementation(() => {});

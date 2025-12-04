@@ -5,12 +5,13 @@ import { resetConfig } from './config.js';
 
 // Mock the AWS SDK
 vi.mock('@aws-sdk/client-dynamodb', () => {
-  const actualCommand = vi.fn();
   return {
-    DynamoDBClient: vi.fn(() => ({
-      send: vi.fn(),
-    })),
-    GetItemCommand: actualCommand,
+    DynamoDBClient: vi.fn(function () {
+      return { send: vi.fn() };
+    }),
+    GetItemCommand: vi.fn(function (input: unknown) {
+      return { input };
+    }),
   };
 });
 
@@ -47,9 +48,9 @@ describe('lease-lookup', () => {
     mockDynamoDBClient = {
       send: mockSend,
     };
-    vi.mocked(DynamoDBClient).mockImplementation(
-      () => mockDynamoDBClient as unknown as DynamoDBClient
-    );
+    vi.mocked(DynamoDBClient).mockImplementation(function () {
+      return mockDynamoDBClient as unknown as DynamoDBClient;
+    });
   });
 
   afterEach(() => {
