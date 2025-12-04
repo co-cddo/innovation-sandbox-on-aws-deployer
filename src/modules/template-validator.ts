@@ -39,15 +39,15 @@ const CF_INTRINSIC_TAGS = [
 const cfTypes = CF_INTRINSIC_TAGS.flatMap((tag) => [
   new yaml.Type(tag, {
     kind: 'scalar',
-    construct: (data: unknown) => ({ [tag.substring(1)]: data }),
+    construct: (data: unknown): Record<string, unknown> => ({ [tag.substring(1)]: data }),
   }),
   new yaml.Type(tag, {
     kind: 'sequence',
-    construct: (data: unknown) => ({ [tag.substring(1)]: data }),
+    construct: (data: unknown): Record<string, unknown> => ({ [tag.substring(1)]: data }),
   }),
   new yaml.Type(tag, {
     kind: 'mapping',
-    construct: (data: unknown) => ({ [tag.substring(1)]: data }),
+    construct: (data: unknown): Record<string, unknown> => ({ [tag.substring(1)]: data }),
   }),
 ]);
 

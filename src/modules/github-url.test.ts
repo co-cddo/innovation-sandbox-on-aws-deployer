@@ -11,6 +11,10 @@ describe('github-url module', () => {
     process.env = { ...originalEnv };
     // Set required env var for config
     process.env.LEASE_TABLE_NAME = 'test-lease-table';
+    // Clear GitHub Actions env vars that would override defaults
+    delete process.env.GITHUB_PATH;
+    delete process.env.GITHUB_REPO;
+    delete process.env.GITHUB_BRANCH;
   });
 
   afterEach(() => {
