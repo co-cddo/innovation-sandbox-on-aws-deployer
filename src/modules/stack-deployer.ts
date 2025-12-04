@@ -5,7 +5,10 @@ import type { AssumedRoleCredentials } from './role-assumer.js';
  * Custom error class for stack deployment failures
  */
 export class StackDeploymentError extends Error {
-  constructor(message: string, public readonly originalError?: unknown) {
+  constructor(
+    message: string,
+    public readonly originalError?: unknown
+  ) {
     super(message);
     this.name = 'StackDeploymentError';
     // Maintain proper stack trace for where error was thrown

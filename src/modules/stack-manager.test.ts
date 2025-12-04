@@ -33,9 +33,7 @@ vi.mock('@aws-sdk/client-cloudformation', () => {
 
 // Mock the deployStack function
 vi.mock('./stack-deployer.js', async () => {
-  const actual = await vi.importActual<typeof import('./stack-deployer.js')>(
-    './stack-deployer.js'
-  );
+  const actual = await vi.importActual<typeof import('./stack-deployer.js')>('./stack-deployer.js');
   return {
     ...actual,
     deployStack: vi.fn(),
@@ -474,8 +472,7 @@ describe('stack-manager', () => {
 
     it('should delete and recreate stack for ROLLBACK_COMPLETE status', async () => {
       const mockStackId = 'arn:aws:cloudformation:us-west-2:123456789012:stack/test-stack/abc123';
-      const newStackId =
-        'arn:aws:cloudformation:us-west-2:123456789012:stack/test-stack/def456';
+      const newStackId = 'arn:aws:cloudformation:us-west-2:123456789012:stack/test-stack/def456';
 
       // First call: describe stack (ROLLBACK_COMPLETE)
       // Second call: delete stack
@@ -551,8 +548,7 @@ describe('stack-manager', () => {
 
     it('should create new stack for DELETE_COMPLETE status', async () => {
       const mockStackId = 'arn:aws:cloudformation:us-west-2:123456789012:stack/test-stack/abc123';
-      const newStackId =
-        'arn:aws:cloudformation:us-west-2:123456789012:stack/test-stack/new789';
+      const newStackId = 'arn:aws:cloudformation:us-west-2:123456789012:stack/test-stack/new789';
 
       mockSend.mockResolvedValue({
         Stacks: [

@@ -7,7 +7,10 @@ import type { AssumedRoleCredentials } from './role-assumer.js';
  * Custom error class for deployment orchestration failures
  */
 export class DeploymentOrchestrationError extends Error {
-  constructor(message: string, public readonly originalError?: unknown) {
+  constructor(
+    message: string,
+    public readonly originalError?: unknown
+  ) {
     super(message);
     this.name = 'DeploymentOrchestrationError';
     // Maintain proper stack trace for where error was thrown
@@ -136,9 +139,7 @@ export async function deployWithParameters(
       : [];
 
     // Combine mapped and custom parameters (custom parameters override mapped ones)
-    const parameterMap = new Map(
-      mappedParameters.map((p) => [p.ParameterKey, p.ParameterValue])
-    );
+    const parameterMap = new Map(mappedParameters.map((p) => [p.ParameterKey, p.ParameterValue]));
 
     // Override with custom parameters
     customParameterArray.forEach((p) => {
@@ -200,8 +201,7 @@ export async function deployWithParameters(
     };
   } catch (error) {
     // Wrap any errors in DeploymentOrchestrationError
-    const errorMessage =
-      error instanceof Error ? error.message : 'Unknown error during deployment';
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error during deployment';
     const errorName = error instanceof Error ? error.name : 'UnknownError';
 
     log.error(`Failed to deploy stack '${stackName}': ${errorName} - ${errorMessage}`, {

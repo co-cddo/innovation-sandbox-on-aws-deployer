@@ -47,7 +47,9 @@ describe('lease-lookup', () => {
     mockDynamoDBClient = {
       send: mockSend,
     };
-    vi.mocked(DynamoDBClient).mockImplementation(() => mockDynamoDBClient as unknown as DynamoDBClient);
+    vi.mocked(DynamoDBClient).mockImplementation(
+      () => mockDynamoDBClient as unknown as DynamoDBClient
+    );
   });
 
   afterEach(() => {
@@ -78,7 +80,10 @@ describe('lease-lookup', () => {
         Item: mockItem,
       });
 
-      const result = await lookupLease('user@example.gov.uk', 'f2d3eb78-907a-4c20-8127-7ce45758836d');
+      const result = await lookupLease(
+        'user@example.gov.uk',
+        'f2d3eb78-907a-4c20-8127-7ce45758836d'
+      );
 
       expect(result).toMatchObject({
         leaseId: 'f2d3eb78-907a-4c20-8127-7ce45758836d',
@@ -249,7 +254,9 @@ describe('lease-lookup', () => {
         Item: undefined,
       });
 
-      await expect(lookupLease('user@example.gov.uk', 'lease-notfound')).rejects.toThrow(LeaseLookupError);
+      await expect(lookupLease('user@example.gov.uk', 'lease-notfound')).rejects.toThrow(
+        LeaseLookupError
+      );
       await expect(lookupLease('user@example.gov.uk', 'lease-notfound')).rejects.toThrow(
         'Lease not found: lease-notfound for user user@example.gov.uk'
       );
@@ -260,7 +267,9 @@ describe('lease-lookup', () => {
         Item: null,
       });
 
-      await expect(lookupLease('user@example.gov.uk', 'lease-null')).rejects.toThrow(LeaseLookupError);
+      await expect(lookupLease('user@example.gov.uk', 'lease-null')).rejects.toThrow(
+        LeaseLookupError
+      );
       await expect(lookupLease('user@example.gov.uk', 'lease-null')).rejects.toThrow(
         'Lease not found: lease-null for user user@example.gov.uk'
       );
@@ -277,7 +286,9 @@ describe('lease-lookup', () => {
         Item: mockItem,
       });
 
-      await expect(lookupLease('user@example.gov.uk', 'lease-bad')).rejects.toThrow(LeaseLookupError);
+      await expect(lookupLease('user@example.gov.uk', 'lease-bad')).rejects.toThrow(
+        LeaseLookupError
+      );
       await expect(lookupLease('user@example.gov.uk', 'lease-bad')).rejects.toThrow(
         'missing required fields (uuid or awsAccountId)'
       );
@@ -294,7 +305,9 @@ describe('lease-lookup', () => {
         Item: mockItem,
       });
 
-      await expect(lookupLease('user@example.gov.uk', 'lease-bad')).rejects.toThrow(LeaseLookupError);
+      await expect(lookupLease('user@example.gov.uk', 'lease-bad')).rejects.toThrow(
+        LeaseLookupError
+      );
       await expect(lookupLease('user@example.gov.uk', 'lease-bad')).rejects.toThrow(
         'missing required fields (uuid or awsAccountId)'
       );
@@ -306,9 +319,15 @@ describe('lease-lookup', () => {
 
       mockSend.mockRejectedValue(dynamoError);
 
-      await expect(lookupLease('user@example.gov.uk', 'lease-12345')).rejects.toThrow(LeaseLookupError);
-      await expect(lookupLease('user@example.gov.uk', 'lease-12345')).rejects.toThrow('ResourceNotFoundException');
-      await expect(lookupLease('user@example.gov.uk', 'lease-12345')).rejects.toThrow('Requested resource not found');
+      await expect(lookupLease('user@example.gov.uk', 'lease-12345')).rejects.toThrow(
+        LeaseLookupError
+      );
+      await expect(lookupLease('user@example.gov.uk', 'lease-12345')).rejects.toThrow(
+        'ResourceNotFoundException'
+      );
+      await expect(lookupLease('user@example.gov.uk', 'lease-12345')).rejects.toThrow(
+        'Requested resource not found'
+      );
     });
 
     it('should handle ValidationException from DynamoDB', async () => {
@@ -317,8 +336,12 @@ describe('lease-lookup', () => {
 
       mockSend.mockRejectedValue(dynamoError);
 
-      await expect(lookupLease('user@example.gov.uk', 'lease-12345')).rejects.toThrow(LeaseLookupError);
-      await expect(lookupLease('user@example.gov.uk', 'lease-12345')).rejects.toThrow('ValidationException');
+      await expect(lookupLease('user@example.gov.uk', 'lease-12345')).rejects.toThrow(
+        LeaseLookupError
+      );
+      await expect(lookupLease('user@example.gov.uk', 'lease-12345')).rejects.toThrow(
+        'ValidationException'
+      );
     });
 
     it('should handle ProvisionedThroughputExceededException', async () => {
@@ -327,7 +350,9 @@ describe('lease-lookup', () => {
 
       mockSend.mockRejectedValue(dynamoError);
 
-      await expect(lookupLease('user@example.gov.uk', 'lease-12345')).rejects.toThrow(LeaseLookupError);
+      await expect(lookupLease('user@example.gov.uk', 'lease-12345')).rejects.toThrow(
+        LeaseLookupError
+      );
       await expect(lookupLease('user@example.gov.uk', 'lease-12345')).rejects.toThrow(
         'ProvisionedThroughputExceededException'
       );
@@ -339,8 +364,12 @@ describe('lease-lookup', () => {
 
       mockSend.mockRejectedValue(dynamoError);
 
-      await expect(lookupLease('user@example.gov.uk', 'lease-12345')).rejects.toThrow(LeaseLookupError);
-      await expect(lookupLease('user@example.gov.uk', 'lease-12345')).rejects.toThrow('InternalServerError');
+      await expect(lookupLease('user@example.gov.uk', 'lease-12345')).rejects.toThrow(
+        LeaseLookupError
+      );
+      await expect(lookupLease('user@example.gov.uk', 'lease-12345')).rejects.toThrow(
+        'InternalServerError'
+      );
     });
 
     it('should handle network errors', async () => {
@@ -349,15 +378,23 @@ describe('lease-lookup', () => {
 
       mockSend.mockRejectedValue(networkError);
 
-      await expect(lookupLease('user@example.gov.uk', 'lease-12345')).rejects.toThrow(LeaseLookupError);
-      await expect(lookupLease('user@example.gov.uk', 'lease-12345')).rejects.toThrow('NetworkingError');
+      await expect(lookupLease('user@example.gov.uk', 'lease-12345')).rejects.toThrow(
+        LeaseLookupError
+      );
+      await expect(lookupLease('user@example.gov.uk', 'lease-12345')).rejects.toThrow(
+        'NetworkingError'
+      );
     });
 
     it('should handle unknown errors gracefully', async () => {
       mockSend.mockRejectedValue('unknown error string');
 
-      await expect(lookupLease('user@example.gov.uk', 'lease-12345')).rejects.toThrow(LeaseLookupError);
-      await expect(lookupLease('user@example.gov.uk', 'lease-12345')).rejects.toThrow('Unknown error looking up lease');
+      await expect(lookupLease('user@example.gov.uk', 'lease-12345')).rejects.toThrow(
+        LeaseLookupError
+      );
+      await expect(lookupLease('user@example.gov.uk', 'lease-12345')).rejects.toThrow(
+        'Unknown error looking up lease'
+      );
     });
 
     it('should include lease ID, user email and table name in error messages', async () => {
@@ -366,9 +403,15 @@ describe('lease-lookup', () => {
 
       mockSend.mockRejectedValue(dynamoError);
 
-      await expect(lookupLease('user@example.gov.uk', 'lease-12345')).rejects.toThrow('lease-12345');
-      await expect(lookupLease('user@example.gov.uk', 'lease-12345')).rejects.toThrow('user@example.gov.uk');
-      await expect(lookupLease('user@example.gov.uk', 'lease-12345')).rejects.toThrow('isb-leases-test');
+      await expect(lookupLease('user@example.gov.uk', 'lease-12345')).rejects.toThrow(
+        'lease-12345'
+      );
+      await expect(lookupLease('user@example.gov.uk', 'lease-12345')).rejects.toThrow(
+        'user@example.gov.uk'
+      );
+      await expect(lookupLease('user@example.gov.uk', 'lease-12345')).rejects.toThrow(
+        'isb-leases-test'
+      );
     });
 
     it('should preserve original error in LeaseLookupError', async () => {

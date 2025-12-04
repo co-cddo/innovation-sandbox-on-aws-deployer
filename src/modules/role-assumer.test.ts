@@ -46,9 +46,12 @@ describe('role-assumer', () => {
 
     // Setup mock STS client - returns different creds for each call
     mockSend = vi.fn();
-    vi.mocked(STSClient).mockImplementation(() => ({
-      send: mockSend,
-    }) as unknown as STSClient);
+    vi.mocked(STSClient).mockImplementation(
+      () =>
+        ({
+          send: mockSend,
+        }) as unknown as STSClient
+    );
   });
 
   afterEach(() => {
@@ -141,14 +144,20 @@ describe('role-assumer', () => {
       await assumeRole('111222333444');
 
       // First call always goes to hub account
-      expect(AssumeRoleCommand).toHaveBeenNthCalledWith(1, expect.objectContaining({
-        RoleArn: `arn:aws:iam::${HUB_ACCOUNT_ID}:role/InnovationSandbox-ndx-IntermediateRole`,
-      }));
+      expect(AssumeRoleCommand).toHaveBeenNthCalledWith(
+        1,
+        expect.objectContaining({
+          RoleArn: `arn:aws:iam::${HUB_ACCOUNT_ID}:role/InnovationSandbox-ndx-IntermediateRole`,
+        })
+      );
 
       // Second call goes to target account
-      expect(AssumeRoleCommand).toHaveBeenNthCalledWith(2, expect.objectContaining({
-        RoleArn: 'arn:aws:iam::111222333444:role/InnovationSandbox-ndx-SandboxAccountRole',
-      }));
+      expect(AssumeRoleCommand).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({
+          RoleArn: 'arn:aws:iam::111222333444:role/InnovationSandbox-ndx-SandboxAccountRole',
+        })
+      );
     });
 
     it('should throw RoleAssumptionError when intermediate role assumption fails', async () => {
@@ -176,9 +185,7 @@ describe('role-assumer', () => {
     it('should throw RoleAssumptionError when intermediate credentials are missing', async () => {
       mockSend.mockResolvedValue({ Credentials: undefined });
 
-      await expect(assumeRole('123456789012')).rejects.toThrow(
-        /did not return credentials/
-      );
+      await expect(assumeRole('123456789012')).rejects.toThrow(/did not return credentials/);
     });
 
     it('should throw RoleAssumptionError when sandbox credentials are missing', async () => {
@@ -186,9 +193,7 @@ describe('role-assumer', () => {
         .mockResolvedValueOnce({ Credentials: mockIntermediateCredentials })
         .mockResolvedValueOnce({ Credentials: undefined });
 
-      await expect(assumeRole('123456789012')).rejects.toThrow(
-        /did not return credentials/
-      );
+      await expect(assumeRole('123456789012')).rejects.toThrow(/did not return credentials/);
     });
 
     it('should throw RoleAssumptionError when AccessKeyId is missing', async () => {
@@ -201,9 +206,7 @@ describe('role-assumer', () => {
           },
         });
 
-      await expect(assumeRole('123456789012')).rejects.toThrow(
-        /incomplete credentials/
-      );
+      await expect(assumeRole('123456789012')).rejects.toThrow(/incomplete credentials/);
     });
 
     it('should include account ID in error messages', async () => {

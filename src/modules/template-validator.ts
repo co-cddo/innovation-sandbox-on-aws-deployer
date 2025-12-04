@@ -60,7 +60,10 @@ const CF_SCHEMA = yaml.DEFAULT_SCHEMA.extend(cfTypes);
  * Custom error class for template validation failures
  */
 export class TemplateValidationError extends Error {
-  constructor(message: string, public readonly cause?: unknown) {
+  constructor(
+    message: string,
+    public readonly cause?: unknown
+  ) {
     super(message);
     this.name = 'TemplateValidationError';
     // Maintains proper stack trace for where our error was thrown (only available on V8)
@@ -124,22 +127,14 @@ export function validateTemplate(yamlContent: string): ValidatedTemplate {
   } catch (error) {
     // Handle YAML parsing errors
     if (error instanceof Error) {
-      throw new TemplateValidationError(
-        `Failed to parse YAML: ${error.message}`,
-        error
-      );
+      throw new TemplateValidationError(`Failed to parse YAML: ${error.message}`, error);
     }
-    throw new TemplateValidationError(
-      `Failed to parse YAML: ${String(error)}`,
-      error
-    );
+    throw new TemplateValidationError(`Failed to parse YAML: ${String(error)}`, error);
   }
 
   // Validate parsed content is not null/undefined
   if (parsed === null || parsed === undefined) {
-    throw new TemplateValidationError(
-      'Template is empty or contains only comments'
-    );
+    throw new TemplateValidationError('Template is empty or contains only comments');
   }
 
   // Validate parsed content is an object
@@ -180,9 +175,7 @@ export function validateTemplate(yamlContent: string): ValidatedTemplate {
       parameters.push(...Object.keys(parametersSection as Record<string, unknown>));
     } else if (parametersSection !== null && parametersSection !== undefined) {
       // Parameters section exists but is not a valid object
-      throw new TemplateValidationError(
-        'Parameters section must be an object'
-      );
+      throw new TemplateValidationError('Parameters section must be an object');
     }
   }
 

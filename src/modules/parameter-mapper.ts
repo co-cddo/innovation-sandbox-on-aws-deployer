@@ -5,7 +5,10 @@ import type { CloudFormationParameter } from './stack-deployer.js';
  * Custom error class for parameter mapping failures
  */
 export class ParameterMappingError extends Error {
-  constructor(message: string, public readonly originalError?: unknown) {
+  constructor(
+    message: string,
+    public readonly originalError?: unknown
+  ) {
     super(message);
     this.name = 'ParameterMappingError';
     // Maintain proper stack trace for where error was thrown
@@ -29,36 +32,36 @@ export class ParameterMappingError extends Error {
  */
 const PARAMETER_MAPPINGS: Record<string, keyof LeaseDetails> = {
   // Account ID mappings
-  'AccountId': 'accountId',
-  'Account': 'accountId',
-  'AWSAccountId': 'accountId',
-  'AwsAccountId': 'accountId',
+  AccountId: 'accountId',
+  Account: 'accountId',
+  AWSAccountId: 'accountId',
+  AwsAccountId: 'accountId',
 
   // Lease ID mappings
-  'LeaseId': 'leaseId',
-  'Lease': 'leaseId',
+  LeaseId: 'leaseId',
+  Lease: 'leaseId',
 
   // Budget mappings
-  'Budget': 'budgetAmount',
-  'BudgetAmount': 'budgetAmount',
+  Budget: 'budgetAmount',
+  BudgetAmount: 'budgetAmount',
 
   // Email mappings
-  'RequesterEmail': 'requesterEmail',
-  'Email': 'requesterEmail',
-  'UserEmail': 'requesterEmail',
+  RequesterEmail: 'requesterEmail',
+  Email: 'requesterEmail',
+  UserEmail: 'requesterEmail',
 
   // Expiration date mappings
-  'ExpirationDate': 'expirationDate',
-  'Expiration': 'expirationDate',
-  'LeaseExpiration': 'expirationDate',
+  ExpirationDate: 'expirationDate',
+  Expiration: 'expirationDate',
+  LeaseExpiration: 'expirationDate',
 
   // Template name mappings
-  'TemplateName': 'templateName',
-  'Template': 'templateName',
+  TemplateName: 'templateName',
+  Template: 'templateName',
 
   // Status mappings
-  'Status': 'status',
-  'LeaseStatus': 'status',
+  Status: 'status',
+  LeaseStatus: 'status',
 };
 
 /**

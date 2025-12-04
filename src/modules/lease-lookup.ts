@@ -6,7 +6,10 @@ import { getConfig } from './config.js';
  * Custom error class for lease lookup failures
  */
 export class LeaseLookupError extends Error {
-  constructor(message: string, public readonly originalError?: unknown) {
+  constructor(
+    message: string,
+    public readonly originalError?: unknown
+  ) {
     super(message);
     this.name = 'LeaseLookupError';
     // Maintain proper stack trace for where error was thrown

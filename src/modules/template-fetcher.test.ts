@@ -116,7 +116,9 @@ Resources:
       const url = 'https://raw.githubusercontent.com/test/repo/main/template.yaml';
 
       await expect(fetchTemplate(url)).rejects.toThrow(TemplateFetchError);
-      await expect(fetchTemplate(url)).rejects.toThrow(`Request timed out after ${FETCH_TIMEOUT_MS}ms`);
+      await expect(fetchTemplate(url)).rejects.toThrow(
+        `Request timed out after ${FETCH_TIMEOUT_MS}ms`
+      );
 
       try {
         await fetchTemplate(url);
@@ -247,7 +249,9 @@ Resources:
       const url = 'https://raw.githubusercontent.com/test/repo/main/template.yaml';
 
       await expect(fetchTemplate(url)).rejects.toThrow(TemplateFetchError);
-      await expect(fetchTemplate(url)).rejects.toThrow(`Request timed out after ${FETCH_TIMEOUT_MS}ms`);
+      await expect(fetchTemplate(url)).rejects.toThrow(
+        `Request timed out after ${FETCH_TIMEOUT_MS}ms`
+      );
     });
 
     it('should handle unknown error types', async () => {
@@ -284,11 +288,7 @@ Resources:
 
   describe('TemplateFetchError', () => {
     it('should create error with all properties', () => {
-      const error = new TemplateFetchError(
-        'Test error',
-        404,
-        'https://example.com/test.yaml'
-      );
+      const error = new TemplateFetchError('Test error', 404, 'https://example.com/test.yaml');
 
       expect(error.message).toBe('Test error');
       expect(error.statusCode).toBe(404);

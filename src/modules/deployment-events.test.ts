@@ -220,8 +220,7 @@ describe('deployment-events module', () => {
         leaseId: 'lease-666',
         accountId: '666666666666',
         stackName: 'no-logger-error-stack',
-        stackId:
-          'arn:aws:cloudformation:us-west-2:666666666666:stack/no-logger-error-stack/guid',
+        stackId: 'arn:aws:cloudformation:us-west-2:666666666666:stack/no-logger-error-stack/guid',
         action: 'created',
         timestamp: '2025-12-03T19:00:00.000Z',
       };
@@ -276,8 +275,7 @@ describe('deployment-events module', () => {
         leaseId: 'lease-correlation-test',
         accountId: '888888888888',
         stackName: 'correlation-stack',
-        stackId:
-          'arn:aws:cloudformation:us-west-2:888888888888:stack/correlation-stack/guid',
+        stackId: 'arn:aws:cloudformation:us-west-2:888888888888:stack/correlation-stack/guid',
         action: 'created',
         timestamp: '2025-12-03T21:00:00.000Z',
       };

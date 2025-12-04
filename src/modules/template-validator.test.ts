@@ -156,9 +156,7 @@ Resources:
     Properties: [unclosed bracket
 `;
 
-      expect(() => validateTemplate(yamlContent)).toThrow(
-        TemplateValidationError
-      );
+      expect(() => validateTemplate(yamlContent)).toThrow(TemplateValidationError);
       expect(() => validateTemplate(yamlContent)).toThrow(/Failed to parse YAML/);
     });
 
@@ -172,9 +170,7 @@ Resources:
      BucketName: test
 `;
 
-      expect(() => validateTemplate(yamlContent)).toThrow(
-        TemplateValidationError
-      );
+      expect(() => validateTemplate(yamlContent)).toThrow(TemplateValidationError);
       expect(() => validateTemplate(yamlContent)).toThrow(/Failed to parse YAML/);
     });
 
@@ -184,27 +180,19 @@ AWSTemplateFormatVersion: '2010-09-09'
 Resources: @#$%^&*
 `;
 
-      expect(() => validateTemplate(yamlContent)).toThrow(
-        TemplateValidationError
-      );
+      expect(() => validateTemplate(yamlContent)).toThrow(TemplateValidationError);
     });
   });
 
   describe('Invalid Template Structure', () => {
     it('should throw error for empty string', () => {
       expect(() => validateTemplate('')).toThrow(TemplateValidationError);
-      expect(() => validateTemplate('')).toThrow(
-        /Template content cannot be empty/
-      );
+      expect(() => validateTemplate('')).toThrow(/Template content cannot be empty/);
     });
 
     it('should throw error for whitespace-only content', () => {
-      expect(() => validateTemplate('   \n\t  ')).toThrow(
-        TemplateValidationError
-      );
-      expect(() => validateTemplate('   \n\t  ')).toThrow(
-        /Template content cannot be empty/
-      );
+      expect(() => validateTemplate('   \n\t  ')).toThrow(TemplateValidationError);
+      expect(() => validateTemplate('   \n\t  ')).toThrow(/Template content cannot be empty/);
     });
 
     it('should throw error for template with only comments', () => {
@@ -213,9 +201,7 @@ Resources: @#$%^&*
 # Another comment
 `;
 
-      expect(() => validateTemplate(yamlContent)).toThrow(
-        TemplateValidationError
-      );
+      expect(() => validateTemplate(yamlContent)).toThrow(TemplateValidationError);
       expect(() => validateTemplate(yamlContent)).toThrow(
         /Template is empty or contains only comments/
       );
@@ -228,9 +214,7 @@ Resources: @#$%^&*
 - item3
 `;
 
-      expect(() => validateTemplate(yamlContent)).toThrow(
-        TemplateValidationError
-      );
+      expect(() => validateTemplate(yamlContent)).toThrow(TemplateValidationError);
       expect(() => validateTemplate(yamlContent)).toThrow(
         /Template must be a YAML object, got array/
       );
@@ -239,9 +223,7 @@ Resources: @#$%^&*
     it('should throw error for YAML string instead of object', () => {
       const yamlContent = 'just a plain string';
 
-      expect(() => validateTemplate(yamlContent)).toThrow(
-        TemplateValidationError
-      );
+      expect(() => validateTemplate(yamlContent)).toThrow(TemplateValidationError);
       expect(() => validateTemplate(yamlContent)).toThrow(
         /Template must be a YAML object, got string/
       );
@@ -250,9 +232,7 @@ Resources: @#$%^&*
     it('should throw error for YAML number instead of object', () => {
       const yamlContent = '12345';
 
-      expect(() => validateTemplate(yamlContent)).toThrow(
-        TemplateValidationError
-      );
+      expect(() => validateTemplate(yamlContent)).toThrow(TemplateValidationError);
       expect(() => validateTemplate(yamlContent)).toThrow(
         /Template must be a YAML object, got number/
       );
@@ -266,9 +246,7 @@ Parameters:
     Type: String
 `;
 
-      expect(() => validateTemplate(yamlContent)).toThrow(
-        TemplateValidationError
-      );
+      expect(() => validateTemplate(yamlContent)).toThrow(TemplateValidationError);
       expect(() => validateTemplate(yamlContent)).toThrow(
         /Template must contain either AWSTemplateFormatVersion or Resources section/
       );
@@ -277,9 +255,7 @@ Parameters:
     it('should throw error for template with empty object', () => {
       const yamlContent = '{}';
 
-      expect(() => validateTemplate(yamlContent)).toThrow(
-        TemplateValidationError
-      );
+      expect(() => validateTemplate(yamlContent)).toThrow(TemplateValidationError);
       expect(() => validateTemplate(yamlContent)).toThrow(
         /Template must contain either AWSTemplateFormatVersion or Resources section/
       );
@@ -296,12 +272,8 @@ Resources:
     Type: AWS::S3::Bucket
 `;
 
-      expect(() => validateTemplate(yamlContent)).toThrow(
-        TemplateValidationError
-      );
-      expect(() => validateTemplate(yamlContent)).toThrow(
-        /Parameters section must be an object/
-      );
+      expect(() => validateTemplate(yamlContent)).toThrow(TemplateValidationError);
+      expect(() => validateTemplate(yamlContent)).toThrow(/Parameters section must be an object/);
     });
 
     it('should throw error for invalid Parameters section (string)', () => {
@@ -313,12 +285,8 @@ Resources:
     Type: AWS::S3::Bucket
 `;
 
-      expect(() => validateTemplate(yamlContent)).toThrow(
-        TemplateValidationError
-      );
-      expect(() => validateTemplate(yamlContent)).toThrow(
-        /Parameters section must be an object/
-      );
+      expect(() => validateTemplate(yamlContent)).toThrow(TemplateValidationError);
+      expect(() => validateTemplate(yamlContent)).toThrow(/Parameters section must be an object/);
     });
   });
 
@@ -392,9 +360,12 @@ Resources:
 
     it('should handle very long template', () => {
       // Generate a template with many resources
-      const resources = Array.from({ length: 100 }, (_, i) => `
+      const resources = Array.from(
+        { length: 100 },
+        (_, i) => `
   Bucket${i}:
-    Type: AWS::S3::Bucket`).join('');
+    Type: AWS::S3::Bucket`
+      ).join('');
 
       const yamlContent = `
 AWSTemplateFormatVersion: '2010-09-09'

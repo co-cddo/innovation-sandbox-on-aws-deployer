@@ -16,9 +16,7 @@ vi.mock('./parameter-mapper.js', () => ({
 }));
 
 vi.mock('./stack-manager.js', async () => {
-  const actual = await vi.importActual<typeof import('./stack-manager.js')>(
-    './stack-manager.js'
-  );
+  const actual = await vi.importActual<typeof import('./stack-manager.js')>('./stack-manager.js');
   return {
     ...actual,
     deployOrUpdateStack: vi.fn(),
@@ -384,9 +382,7 @@ describe('deployment-orchestrator', () => {
       ];
 
       vi.mocked(mapParameters).mockReturnValue(mappedParams);
-      vi.mocked(deployOrUpdateStack).mockRejectedValue(
-        new Error('CloudFormation service error')
-      );
+      vi.mocked(deployOrUpdateStack).mockRejectedValue(new Error('CloudFormation service error'));
 
       const input: DeploymentInput = {
         templateBody: '{"AWSTemplateFormatVersion":"2010-09-09"}',

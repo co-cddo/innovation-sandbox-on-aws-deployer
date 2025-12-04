@@ -435,7 +435,8 @@ describe('stack-deployer', () => {
     });
 
     it('should handle complex templates with nested resources', async () => {
-      const mockStackId = 'arn:aws:cloudformation:us-west-2:123456789012:stack/complex-stack/xyz789';
+      const mockStackId =
+        'arn:aws:cloudformation:us-west-2:123456789012:stack/complex-stack/xyz789';
 
       mockSend.mockResolvedValue({
         StackId: mockStackId,

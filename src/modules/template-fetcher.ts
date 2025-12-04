@@ -82,11 +82,7 @@ export async function fetchTemplate(url: string): Promise<string> {
 
     // Handle abort (timeout) errors
     if (error instanceof Error && error.name === 'AbortError') {
-      throw new TemplateFetchError(
-        `Request timed out after ${FETCH_TIMEOUT_MS}ms`,
-        undefined,
-        url
-      );
+      throw new TemplateFetchError(`Request timed out after ${FETCH_TIMEOUT_MS}ms`, undefined, url);
     }
 
     // Re-throw TemplateFetchError instances
@@ -96,11 +92,7 @@ export async function fetchTemplate(url: string): Promise<string> {
 
     // Handle other network errors
     if (error instanceof Error) {
-      throw new TemplateFetchError(
-        `Network error: ${error.message}`,
-        undefined,
-        url
-      );
+      throw new TemplateFetchError(`Network error: ${error.message}`, undefined, url);
     }
 
     // Handle unknown errors

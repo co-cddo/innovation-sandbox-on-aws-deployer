@@ -136,9 +136,7 @@ export function generateStackName(templateName: string, leaseId: string): string
 
   // Final validation: ensure it starts with a letter
   if (!/^[a-zA-Z]/.test(stackName)) {
-    throw new StackNameError(
-      `Generated stack name "${stackName}" does not start with a letter`
-    );
+    throw new StackNameError(`Generated stack name "${stackName}" does not start with a letter`);
   }
 
   // Final validation: ensure it matches the CloudFormation pattern

@@ -97,7 +97,7 @@ describe('parameter-mapper', () => {
       const leaseDetails: LeaseDetails = {
         leaseId: 'lease-12345',
         accountId: '123456789012',
-        budgetAmount: 5000.50,
+        budgetAmount: 5000.5,
       };
 
       const templateParameters = ['Budget', 'BudgetAmount'];
@@ -121,9 +121,7 @@ describe('parameter-mapper', () => {
 
       const result = mapParameters(leaseDetails, templateParameters);
 
-      expect(result).toEqual([
-        { ParameterKey: 'Budget', ParameterValue: '0' },
-      ]);
+      expect(result).toEqual([{ ParameterKey: 'Budget', ParameterValue: '0' }]);
     });
 
     it('should return empty array when no parameters are in template', () => {
@@ -251,12 +249,7 @@ describe('parameter-mapper', () => {
         requesterEmail: '',
       };
 
-      const templateParameters = [
-        'LeaseId',
-        'AccountId',
-        'TemplateName',
-        'RequesterEmail',
-      ];
+      const templateParameters = ['LeaseId', 'AccountId', 'TemplateName', 'RequesterEmail'];
 
       const result = mapParameters(leaseDetails, templateParameters);
 
@@ -276,12 +269,12 @@ describe('parameter-mapper', () => {
       };
 
       const templateParameters = [
-        'LeaseId',        // mapped, has value
-        'AccountId',      // mapped, has value
-        'Budget',         // mapped, has value
-        'Status',         // mapped, no value (should skip)
+        'LeaseId', // mapped, has value
+        'AccountId', // mapped, has value
+        'Budget', // mapped, has value
+        'Status', // mapped, no value (should skip)
         'RequesterEmail', // mapped, no value (should skip)
-        'UnknownParam',   // not mapped (should skip)
+        'UnknownParam', // not mapped (should skip)
       ];
 
       const result = mapParameters(leaseDetails, templateParameters);
@@ -300,10 +293,10 @@ describe('parameter-mapper', () => {
       };
 
       const templateParameters = [
-        'Budget',          // mapped but no value
-        'Status',          // mapped but no value
-        'UnknownParam1',   // not mapped
-        'UnknownParam2',   // not mapped
+        'Budget', // mapped but no value
+        'Status', // mapped but no value
+        'UnknownParam1', // not mapped
+        'UnknownParam2', // not mapped
       ];
 
       const result = mapParameters(leaseDetails, templateParameters);
@@ -322,9 +315,7 @@ describe('parameter-mapper', () => {
 
       const result = mapParameters(leaseDetails, templateParameters);
 
-      expect(result).toEqual([
-        { ParameterKey: 'Status', ParameterValue: 'active' },
-      ]);
+      expect(result).toEqual([{ ParameterKey: 'Status', ParameterValue: 'active' }]);
     });
 
     it('should preserve parameter order from template', () => {
@@ -358,9 +349,7 @@ describe('parameter-mapper', () => {
 
       const result = mapParameters(leaseDetails, templateParameters);
 
-      expect(result).toEqual([
-        { ParameterKey: 'Budget', ParameterValue: '999999.99' },
-      ]);
+      expect(result).toEqual([{ ParameterKey: 'Budget', ParameterValue: '999999.99' }]);
     });
 
     it('should handle negative budget numbers (edge case)', () => {
@@ -374,9 +363,7 @@ describe('parameter-mapper', () => {
 
       const result = mapParameters(leaseDetails, templateParameters);
 
-      expect(result).toEqual([
-        { ParameterKey: 'Budget', ParameterValue: '-100' },
-      ]);
+      expect(result).toEqual([{ ParameterKey: 'Budget', ParameterValue: '-100' }]);
     });
 
     it('should handle ISO date format in expirationDate', () => {

@@ -87,9 +87,7 @@ export function parseLeaseEvent(event: unknown): ParsedLeaseEvent {
 
   // Extract optional field: approvedBy
   const approvedBy =
-    'approvedBy' in detail && isNonEmptyString(detail.approvedBy)
-      ? detail.approvedBy
-      : undefined;
+    'approvedBy' in detail && isNonEmptyString(detail.approvedBy) ? detail.approvedBy : undefined;
 
   // Return validated lease event detail
   return {

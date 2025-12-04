@@ -151,11 +151,7 @@ Resources:
     describe('when template fetch fails with 500 error', () => {
       it('should throw error and log as error', async () => {
         const mockUrl = 'https://raw.githubusercontent.com/test/repo/main/template.yaml';
-        const serverError = new TemplateFetchError(
-          'HTTP 500: Internal Server Error',
-          500,
-          mockUrl
-        );
+        const serverError = new TemplateFetchError('HTTP 500: Internal Server Error', 500, mockUrl);
 
         vi.spyOn(githubUrl, 'buildTemplateUrl').mockReturnValue(mockUrl);
         vi.spyOn(templateFetcher, 'fetchTemplate').mockRejectedValue(serverError);

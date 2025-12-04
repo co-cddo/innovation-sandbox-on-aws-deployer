@@ -5,7 +5,10 @@ import { getConfig } from './config.js';
  * Custom error class for role assumption failures
  */
 export class RoleAssumptionError extends Error {
-  constructor(message: string, public readonly originalError?: unknown) {
+  constructor(
+    message: string,
+    public readonly originalError?: unknown
+  ) {
     super(message);
     this.name = 'RoleAssumptionError';
     // Maintain proper stack trace for where error was thrown
@@ -122,10 +125,7 @@ export async function assumeRole(accountId: string): Promise<AssumedRoleCredenti
   try {
     // Step 1: Assume IntermediateRole in hub account
     const intermediateRoleArn = `arn:aws:iam::${HUB_ACCOUNT_ID}:role/${ISB_INTERMEDIATE_ROLE}`;
-    const intermediateCreds = await doAssumeRole(
-      intermediateRoleArn,
-      'isb-deployer-intermediate'
-    );
+    const intermediateCreds = await doAssumeRole(intermediateRoleArn, 'isb-deployer-intermediate');
 
     // Step 2: Use intermediate creds to assume SandboxAccountRole in target account
     const sandboxRoleArn = `arn:aws:iam::${accountId}:role/${ISB_SANDBOX_ROLE}`;
@@ -143,8 +143,7 @@ export async function assumeRole(accountId: string): Promise<AssumedRoleCredenti
     }
 
     // Extract error message from AWS SDK error
-    const errorMessage =
-      error instanceof Error ? error.message : 'Unknown error assuming role';
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error assuming role';
     const errorName = error instanceof Error ? error.name : 'UnknownError';
 
     // Provide descriptive error message

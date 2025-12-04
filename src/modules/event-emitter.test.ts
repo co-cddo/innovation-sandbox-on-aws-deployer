@@ -311,9 +311,7 @@ describe('event-emitter module', () => {
       const networkError = new Error('Network timeout');
       mockSend.mockRejectedValue(networkError);
 
-      await expect(emitEvent('Test Event', { test: 'data' })).rejects.toThrow(
-        'Network timeout'
-      );
+      await expect(emitEvent('Test Event', { test: 'data' })).rejects.toThrow('Network timeout');
     });
 
     it('should handle empty detail object', async () => {

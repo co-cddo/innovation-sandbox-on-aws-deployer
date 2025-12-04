@@ -1,9 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-  generateStackName,
-  sanitizeForStackName,
-  StackNameError,
-} from './stack-name.js';
+import { generateStackName, sanitizeForStackName, StackNameError } from './stack-name.js';
 
 describe('stack-name module', () => {
   describe('StackNameError', () => {
@@ -143,16 +139,12 @@ describe('stack-name module', () => {
     describe('error cases', () => {
       it('should throw error on empty string', () => {
         expect(() => sanitizeForStackName('')).toThrow(StackNameError);
-        expect(() => sanitizeForStackName('')).toThrow(
-          'Input string cannot be empty or null'
-        );
+        expect(() => sanitizeForStackName('')).toThrow('Input string cannot be empty or null');
       });
 
       it('should throw error on whitespace-only string', () => {
         expect(() => sanitizeForStackName('   ')).toThrow(StackNameError);
-        expect(() => sanitizeForStackName('   ')).toThrow(
-          'Input string cannot be empty or null'
-        );
+        expect(() => sanitizeForStackName('   ')).toThrow('Input string cannot be empty or null');
       });
 
       it('should throw error on tabs and newlines only', () => {
@@ -380,9 +372,7 @@ describe('stack-name module', () => {
 
       it('should throw error on empty lease ID', () => {
         expect(() => generateStackName('template', '')).toThrow(StackNameError);
-        expect(() => generateStackName('template', '')).toThrow(
-          'Lease ID cannot be empty or null'
-        );
+        expect(() => generateStackName('template', '')).toThrow('Lease ID cannot be empty or null');
       });
 
       it('should throw error on whitespace-only lease ID', () => {
@@ -410,12 +400,8 @@ describe('stack-name module', () => {
         const veryLongLeaseId = 'lease-' + 'x'.repeat(130);
 
         expect(() => generateStackName('template', veryLongLeaseId)).toThrow(StackNameError);
-        expect(() => generateStackName('template', veryLongLeaseId)).toThrow(
-          'Lease ID'
-        );
-        expect(() => generateStackName('template', veryLongLeaseId)).toThrow(
-          'too long'
-        );
+        expect(() => generateStackName('template', veryLongLeaseId)).toThrow('Lease ID');
+        expect(() => generateStackName('template', veryLongLeaseId)).toThrow('too long');
       });
     });
 

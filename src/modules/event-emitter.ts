@@ -60,8 +60,7 @@ export async function emitEvent(detailType: string, detail: object): Promise<voi
 
   // Check for failures in the response
   if (response.FailedEntryCount && response.FailedEntryCount > 0) {
-    const errorMessage =
-      response.Entries?.[0]?.ErrorMessage || 'Unknown error emitting event';
+    const errorMessage = response.Entries?.[0]?.ErrorMessage || 'Unknown error emitting event';
     throw new Error(`Failed to emit event: ${errorMessage}`);
   }
 }

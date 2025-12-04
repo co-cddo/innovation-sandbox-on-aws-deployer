@@ -10,7 +10,10 @@ import type { AssumedRoleCredentials } from './role-assumer.js';
  * Custom error class for stack management failures
  */
 export class StackManagementError extends Error {
-  constructor(message: string, public readonly originalError?: unknown) {
+  constructor(
+    message: string,
+    public readonly originalError?: unknown
+  ) {
     super(message);
     this.name = 'StackManagementError';
     // Maintain proper stack trace for where error was thrown
@@ -201,9 +204,7 @@ export async function getStackStatus(
  * ```
  */
 /* eslint-disable no-console */
-export async function deployOrUpdateStack(
-  input: DeployStackInput
-): Promise<StackOperationResult> {
+export async function deployOrUpdateStack(input: DeployStackInput): Promise<StackOperationResult> {
   const { stackName, credentials } = input;
 
   // Check current stack status
@@ -266,9 +267,7 @@ export async function deployOrUpdateStack(
 
   // Handle ROLLBACK_COMPLETE - must delete and recreate
   if (status === StackStatus.ROLLBACK_COMPLETE) {
-    console.log(
-      `Stack '${stackName}' is in ${status} state. Deleting stack before recreating...`
-    );
+    console.log(`Stack '${stackName}' is in ${status} state. Deleting stack before recreating...`);
 
     // Delete the stack
     const client = new CloudFormationClient({
