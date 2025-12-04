@@ -55,7 +55,7 @@ describe('config module', () => {
       process.env.GITHUB_BRANCH = 'develop';
       process.env.GITHUB_PATH = 'templates';
       process.env.TARGET_ROLE_NAME = 'CustomRole';
-      process.env.AWS_REGION = 'us-east-1';
+      process.env.AWS_REGION = 'us-west-2';
       process.env.EVENT_SOURCE = 'custom-source';
       process.env.LOG_LEVEL = 'DEBUG';
 
@@ -67,7 +67,7 @@ describe('config module', () => {
         githubPath: 'templates',
         leaseTableName: 'custom-lease-table',
         targetRoleName: 'CustomRole',
-        awsRegion: 'us-east-1',
+        awsRegion: 'us-west-2',
         eventSource: 'custom-source',
         logLevel: 'DEBUG',
       });

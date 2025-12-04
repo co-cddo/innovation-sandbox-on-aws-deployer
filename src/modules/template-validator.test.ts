@@ -118,7 +118,7 @@ Parameters:
     Type: String
 Mappings:
   RegionMap:
-    us-east-1:
+    us-west-2:
       AMI: ami-12345
 Conditions:
   IsProduction:

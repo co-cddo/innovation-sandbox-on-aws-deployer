@@ -8,14 +8,14 @@
       "command": "uvx",
       "args": ["awslabs.aws-api-mcp-server@latest"],
       "env": {
-        "AWS_REGION": "us-east-1"
+        "AWS_REGION": "us-west-2"
       }
     },
     "awslabs.cfn-mcp-server": {
       "command": "uvx",
       "args": ["awslabs.cfn-mcp-server@latest"],
       "env": {
-        "AWS_REGION": "us-east-1"
+        "AWS_REGION": "us-west-2"
       }
     },
     "awslabs.aws-iac-mcp-server": {

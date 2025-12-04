@@ -63,7 +63,7 @@ describe('github-url module', () => {
           githubPath: 'cfn/templates',
           leaseTableName: 'custom-table',
           targetRoleName: 'CustomRole',
-          awsRegion: 'us-east-1',
+          awsRegion: 'us-west-2',
           eventSource: 'custom-source',
           logLevel: 'DEBUG',
         };
