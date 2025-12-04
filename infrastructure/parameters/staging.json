@@ -1,0 +1,38 @@
+[
+  {
+    "ParameterKey": "Environment",
+    "ParameterValue": "staging"
+  },
+  {
+    "ParameterKey": "LeaseTableName",
+    "ParameterValue": "staging-isb-leases"
+  },
+  {
+    "ParameterKey": "GithubRepo",
+    "ParameterValue": "co-cddo/ndx_try_aws_scenarios"
+  },
+  {
+    "ParameterKey": "GithubBranch",
+    "ParameterValue": "main"
+  },
+  {
+    "ParameterKey": "GithubPath",
+    "ParameterValue": "cloudformation/scenarios"
+  },
+  {
+    "ParameterKey": "TargetRoleName",
+    "ParameterValue": "ndx_IsbUsersPS"
+  },
+  {
+    "ParameterKey": "EventSource",
+    "ParameterValue": "innovation-sandbox"
+  },
+  {
+    "ParameterKey": "ArtifactBucket",
+    "ParameterValue": "staging-isb-deployer-artifacts"
+  },
+  {
+    "ParameterKey": "ArtifactKey",
+    "ParameterValue": "lambda/handler.zip"
+  }
+]
