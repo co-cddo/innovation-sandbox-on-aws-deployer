@@ -1,4 +1,4 @@
-import { STSClient, AssumeRoleCommand, GetCallerIdentityCommand } from '@aws-sdk/client-sts';
+import { STSClient, AssumeRoleCommand, type STSClientConfig } from '@aws-sdk/client-sts';
 import { getConfig } from './config.js';
 
 /**
@@ -30,26 +30,11 @@ export interface AssumedRoleCredentials {
 }
 
 /**
- * STS client singleton
- */
-let stsClient: STSClient | null = null;
-
-/**
- * Gets or creates the STS client instance
- */
-function getSTSClient(): STSClient {
-  if (!stsClient) {
-    const config = getConfig();
-    stsClient = new STSClient({ region: config.awsRegion });
-  }
-  return stsClient;
-}
-
-/**
- * Resets the STS client singleton (for testing)
+ * Resets internal state (for testing purposes)
  */
 export function resetSTSClient(): void {
-  stsClient = null;
+  // No-op: STS clients are now created per-request for role chaining
+  // This function is kept for API compatibility with tests
 }
 
 /**
@@ -73,7 +58,7 @@ async function doAssumeRole(
   const config = getConfig();
 
   // Create STS client with optional credentials for role chaining
-  const clientConfig: { region: string; credentials?: object } = { region: config.awsRegion };
+  const clientConfig: STSClientConfig = { region: config.awsRegion };
   if (credentials) {
     clientConfig.credentials = {
       accessKeyId: credentials.accessKeyId,

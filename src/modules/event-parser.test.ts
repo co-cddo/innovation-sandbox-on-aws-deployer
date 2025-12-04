@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseLeaseEvent } from './event-parser.js';
-import type { LeaseEventDetail } from '../types/index.js';
+import { parseLeaseEvent, ParsedLeaseEvent } from './event-parser.js';
 
 describe('event-parser module', () => {
   describe('parseLeaseEvent', () => {
@@ -11,50 +10,46 @@ describe('event-parser module', () => {
           id: 'event-123',
           'detail-type': 'LeaseApproved',
           source: 'innovation-sandbox',
-          account: '123456789012',
+          account: '568672915267',
           time: '2024-01-01T00:00:00Z',
           region: 'us-west-2',
           detail: {
-            leaseId: 'lease-abc-123',
-            accountId: '987654321098',
-            status: 'Approved',
+            leaseId: 'f2d3eb78-907a-4c20-8127-7ce45758836d',
+            userEmail: 'user@example.gov.uk',
           },
         };
 
-        const result: LeaseEventDetail = parseLeaseEvent(event);
+        const result: ParsedLeaseEvent = parseLeaseEvent(event);
 
         expect(result).toEqual({
-          leaseId: 'lease-abc-123',
-          accountId: '987654321098',
-          status: 'Approved',
-          templateName: undefined,
+          leaseId: 'f2d3eb78-907a-4c20-8127-7ce45758836d',
+          userEmail: 'user@example.gov.uk',
+          approvedBy: undefined,
         });
       });
 
-      it('should parse valid event with templateName present', () => {
+      it('should parse valid event with approvedBy present', () => {
         const event = {
           version: '0',
           id: 'event-456',
           'detail-type': 'LeaseApproved',
           source: 'innovation-sandbox',
-          account: '123456789012',
+          account: '568672915267',
           time: '2024-01-01T00:00:00Z',
           region: 'us-west-2',
           detail: {
             leaseId: 'lease-xyz-789',
-            accountId: '111222333444',
-            status: 'Approved',
-            templateName: 'ec2-instance',
+            userEmail: 'admin@example.gov.uk',
+            approvedBy: 'AUTO_APPROVED',
           },
         };
 
-        const result: LeaseEventDetail = parseLeaseEvent(event);
+        const result: ParsedLeaseEvent = parseLeaseEvent(event);
 
         expect(result).toEqual({
           leaseId: 'lease-xyz-789',
-          accountId: '111222333444',
-          status: 'Approved',
-          templateName: 'ec2-instance',
+          userEmail: 'admin@example.gov.uk',
+          approvedBy: 'AUTO_APPROVED',
         });
       });
 
@@ -64,122 +59,68 @@ describe('event-parser module', () => {
           id: 'event-789',
           'detail-type': 'LeaseApproved',
           source: 'innovation-sandbox',
-          account: '123456789012',
+          account: '568672915267',
           time: '2024-01-01T00:00:00Z',
           region: 'us-west-2',
           detail: {
             leaseId: 'lease-extra-001',
-            accountId: '555666777888',
-            status: 'Approved',
-            templateName: 's3-bucket',
+            userEmail: 'test@example.gov.uk',
+            approvedBy: 'admin@example.gov.uk',
             extraField1: 'should be ignored',
             extraField2: 123,
             extraField3: { nested: 'object' },
           },
         };
 
-        const result: LeaseEventDetail = parseLeaseEvent(event);
+        const result: ParsedLeaseEvent = parseLeaseEvent(event);
 
         expect(result).toEqual({
           leaseId: 'lease-extra-001',
-          accountId: '555666777888',
-          status: 'Approved',
-          templateName: 's3-bucket',
+          userEmail: 'test@example.gov.uk',
+          approvedBy: 'admin@example.gov.uk',
         });
       });
 
-      it('should treat empty string templateName as undefined', () => {
+      it('should treat empty string approvedBy as undefined', () => {
         const event = {
           version: '0',
-          id: 'event-empty-template',
+          id: 'event-empty-approver',
           'detail-type': 'LeaseApproved',
           source: 'innovation-sandbox',
-          account: '123456789012',
+          account: '568672915267',
           time: '2024-01-01T00:00:00Z',
           region: 'us-west-2',
           detail: {
             leaseId: 'lease-001',
-            accountId: '999888777666',
-            status: 'Approved',
-            templateName: '',
+            userEmail: 'user@example.gov.uk',
+            approvedBy: '',
           },
         };
 
-        const result: LeaseEventDetail = parseLeaseEvent(event);
+        const result: ParsedLeaseEvent = parseLeaseEvent(event);
 
-        expect(result.templateName).toBeUndefined();
+        expect(result.approvedBy).toBeUndefined();
       });
 
-      it('should treat whitespace-only templateName as undefined', () => {
+      it('should treat whitespace-only approvedBy as undefined', () => {
         const event = {
           version: '0',
-          id: 'event-whitespace-template',
+          id: 'event-whitespace-approver',
           'detail-type': 'LeaseApproved',
           source: 'innovation-sandbox',
-          account: '123456789012',
+          account: '568672915267',
           time: '2024-01-01T00:00:00Z',
           region: 'us-west-2',
           detail: {
             leaseId: 'lease-002',
-            accountId: '888777666555',
-            status: 'Approved',
-            templateName: '   ',
+            userEmail: 'user@example.gov.uk',
+            approvedBy: '   ',
           },
         };
 
-        const result: LeaseEventDetail = parseLeaseEvent(event);
+        const result: ParsedLeaseEvent = parseLeaseEvent(event);
 
-        expect(result.templateName).toBeUndefined();
-      });
-
-      it('should accept different status values', () => {
-        const statuses = ['Approved', 'Pending', 'Active', 'Rejected'];
-
-        for (const status of statuses) {
-          const event = {
-            version: '0',
-            id: `event-${status}`,
-            'detail-type': 'Lease Event',
-            source: 'innovation-sandbox',
-            account: '123456789012',
-            time: '2024-01-01T00:00:00Z',
-            region: 'us-west-2',
-            detail: {
-              leaseId: 'lease-status-test',
-              accountId: '123456789012',
-              status: status,
-            },
-          };
-
-          const result = parseLeaseEvent(event);
-          expect(result.status).toBe(status);
-        }
-      });
-
-      it('should trim whitespace from valid string fields', () => {
-        const event = {
-          version: '0',
-          id: 'event-trim',
-          'detail-type': 'LeaseApproved',
-          source: 'innovation-sandbox',
-          account: '123456789012',
-          time: '2024-01-01T00:00:00Z',
-          region: 'us-west-2',
-          detail: {
-            leaseId: '  lease-trim-001  ',
-            accountId: '  999888777666  ',
-            status: '  Approved  ',
-            templateName: '  ec2-instance  ',
-          },
-        };
-
-        const result: LeaseEventDetail = parseLeaseEvent(event);
-
-        // The function validates using trim() but returns original values
-        expect(result.leaseId).toBe('  lease-trim-001  ');
-        expect(result.accountId).toBe('  999888777666  ');
-        expect(result.status).toBe('  Approved  ');
-        expect(result.templateName).toBe('  ec2-instance  ');
+        expect(result.approvedBy).toBeUndefined();
       });
     });
 
@@ -294,8 +235,7 @@ describe('event-parser module', () => {
           'detail-type': 'LeaseApproved',
           source: 'innovation-sandbox',
           detail: {
-            accountId: '123456789012',
-            status: 'Approved',
+            userEmail: 'user@example.gov.uk',
           },
         };
 
@@ -312,8 +252,7 @@ describe('event-parser module', () => {
           source: 'innovation-sandbox',
           detail: {
             leaseId: '',
-            accountId: '123456789012',
-            status: 'Approved',
+            userEmail: 'user@example.gov.uk',
           },
         };
 
@@ -330,8 +269,7 @@ describe('event-parser module', () => {
           source: 'innovation-sandbox',
           detail: {
             leaseId: '   ',
-            accountId: '123456789012',
-            status: 'Approved',
+            userEmail: 'user@example.gov.uk',
           },
         };
 
@@ -348,8 +286,7 @@ describe('event-parser module', () => {
           source: 'innovation-sandbox',
           detail: {
             leaseId: 123,
-            accountId: '123456789012',
-            status: 'Approved',
+            userEmail: 'user@example.gov.uk',
           },
         };
 
@@ -366,8 +303,7 @@ describe('event-parser module', () => {
           source: 'innovation-sandbox',
           detail: {
             leaseId: null,
-            accountId: '123456789012',
-            status: 'Approved',
+            userEmail: 'user@example.gov.uk',
           },
         };
 
@@ -384,8 +320,7 @@ describe('event-parser module', () => {
           source: 'innovation-sandbox',
           detail: {
             leaseId: { id: 'lease-123' },
-            accountId: '123456789012',
-            status: 'Approved',
+            userEmail: 'user@example.gov.uk',
           },
         };
 
@@ -395,313 +330,193 @@ describe('event-parser module', () => {
       });
     });
 
-    describe('missing or invalid accountId', () => {
-      it('should throw error when accountId is missing', () => {
+    describe('missing or invalid userEmail', () => {
+      it('should throw error when userEmail is missing', () => {
         const event = {
           version: '0',
-          id: 'event-no-account-id',
+          id: 'event-no-user-email',
           'detail-type': 'LeaseApproved',
           source: 'innovation-sandbox',
           detail: {
             leaseId: 'lease-123',
-            status: 'Approved',
           },
         };
 
         expect(() => parseLeaseEvent(event)).toThrow(
-          'Event detail must contain a non-empty accountId'
+          'Event detail must contain a non-empty userEmail'
         );
       });
 
-      it('should throw error when accountId is empty string', () => {
+      it('should throw error when userEmail is empty string', () => {
         const event = {
           version: '0',
-          id: 'event-empty-account-id',
+          id: 'event-empty-user-email',
           'detail-type': 'LeaseApproved',
           source: 'innovation-sandbox',
           detail: {
             leaseId: 'lease-123',
-            accountId: '',
-            status: 'Approved',
+            userEmail: '',
           },
         };
 
         expect(() => parseLeaseEvent(event)).toThrow(
-          'Event detail must contain a non-empty accountId'
+          'Event detail must contain a non-empty userEmail'
         );
       });
 
-      it('should throw error when accountId is whitespace-only', () => {
+      it('should throw error when userEmail is whitespace-only', () => {
         const event = {
           version: '0',
-          id: 'event-whitespace-account-id',
+          id: 'event-whitespace-user-email',
           'detail-type': 'LeaseApproved',
           source: 'innovation-sandbox',
           detail: {
             leaseId: 'lease-123',
-            accountId: '   ',
-            status: 'Approved',
+            userEmail: '   ',
           },
         };
 
         expect(() => parseLeaseEvent(event)).toThrow(
-          'Event detail must contain a non-empty accountId'
+          'Event detail must contain a non-empty userEmail'
         );
       });
 
-      it('should throw error when accountId is not a string (number)', () => {
+      it('should throw error when userEmail is not a string (number)', () => {
         const event = {
           version: '0',
-          id: 'event-number-account-id',
+          id: 'event-number-user-email',
           'detail-type': 'LeaseApproved',
           source: 'innovation-sandbox',
           detail: {
             leaseId: 'lease-123',
-            accountId: 123456789012,
-            status: 'Approved',
+            userEmail: 123456789012,
           },
         };
 
         expect(() => parseLeaseEvent(event)).toThrow(
-          'Event detail must contain a non-empty accountId'
+          'Event detail must contain a non-empty userEmail'
         );
       });
 
-      it('should throw error when accountId is not a string (null)', () => {
+      it('should throw error when userEmail is not a string (null)', () => {
         const event = {
           version: '0',
-          id: 'event-null-account-id',
+          id: 'event-null-user-email',
           'detail-type': 'LeaseApproved',
           source: 'innovation-sandbox',
           detail: {
             leaseId: 'lease-123',
-            accountId: null,
-            status: 'Approved',
+            userEmail: null,
           },
         };
 
         expect(() => parseLeaseEvent(event)).toThrow(
-          'Event detail must contain a non-empty accountId'
+          'Event detail must contain a non-empty userEmail'
         );
       });
 
-      it('should throw error when accountId is not a string (boolean)', () => {
+      it('should throw error when userEmail is not a string (boolean)', () => {
         const event = {
           version: '0',
-          id: 'event-boolean-account-id',
+          id: 'event-boolean-user-email',
           'detail-type': 'LeaseApproved',
           source: 'innovation-sandbox',
           detail: {
             leaseId: 'lease-123',
-            accountId: true,
-            status: 'Approved',
+            userEmail: true,
           },
         };
 
         expect(() => parseLeaseEvent(event)).toThrow(
-          'Event detail must contain a non-empty accountId'
+          'Event detail must contain a non-empty userEmail'
         );
       });
     });
 
-    describe('missing or invalid status', () => {
-      it('should throw error when status is missing', () => {
+    describe('optional approvedBy validation', () => {
+      it('should accept undefined approvedBy', () => {
         const event = {
           version: '0',
-          id: 'event-no-status',
+          id: 'event-undefined-approver',
           'detail-type': 'LeaseApproved',
           source: 'innovation-sandbox',
           detail: {
             leaseId: 'lease-123',
-            accountId: '123456789012',
-          },
-        };
-
-        expect(() => parseLeaseEvent(event)).toThrow(
-          'Event detail must contain a non-empty status'
-        );
-      });
-
-      it('should throw error when status is empty string', () => {
-        const event = {
-          version: '0',
-          id: 'event-empty-status',
-          'detail-type': 'LeaseApproved',
-          source: 'innovation-sandbox',
-          detail: {
-            leaseId: 'lease-123',
-            accountId: '123456789012',
-            status: '',
-          },
-        };
-
-        expect(() => parseLeaseEvent(event)).toThrow(
-          'Event detail must contain a non-empty status'
-        );
-      });
-
-      it('should throw error when status is whitespace-only', () => {
-        const event = {
-          version: '0',
-          id: 'event-whitespace-status',
-          'detail-type': 'LeaseApproved',
-          source: 'innovation-sandbox',
-          detail: {
-            leaseId: 'lease-123',
-            accountId: '123456789012',
-            status: '   ',
-          },
-        };
-
-        expect(() => parseLeaseEvent(event)).toThrow(
-          'Event detail must contain a non-empty status'
-        );
-      });
-
-      it('should throw error when status is not a string (number)', () => {
-        const event = {
-          version: '0',
-          id: 'event-number-status',
-          'detail-type': 'LeaseApproved',
-          source: 'innovation-sandbox',
-          detail: {
-            leaseId: 'lease-123',
-            accountId: '123456789012',
-            status: 1,
-          },
-        };
-
-        expect(() => parseLeaseEvent(event)).toThrow(
-          'Event detail must contain a non-empty status'
-        );
-      });
-
-      it('should throw error when status is not a string (null)', () => {
-        const event = {
-          version: '0',
-          id: 'event-null-status',
-          'detail-type': 'LeaseApproved',
-          source: 'innovation-sandbox',
-          detail: {
-            leaseId: 'lease-123',
-            accountId: '123456789012',
-            status: null,
-          },
-        };
-
-        expect(() => parseLeaseEvent(event)).toThrow(
-          'Event detail must contain a non-empty status'
-        );
-      });
-
-      it('should throw error when status is not a string (object)', () => {
-        const event = {
-          version: '0',
-          id: 'event-object-status',
-          'detail-type': 'LeaseApproved',
-          source: 'innovation-sandbox',
-          detail: {
-            leaseId: 'lease-123',
-            accountId: '123456789012',
-            status: { value: 'Approved' },
-          },
-        };
-
-        expect(() => parseLeaseEvent(event)).toThrow(
-          'Event detail must contain a non-empty status'
-        );
-      });
-    });
-
-    describe('optional templateName validation', () => {
-      it('should accept undefined templateName', () => {
-        const event = {
-          version: '0',
-          id: 'event-undefined-template',
-          'detail-type': 'LeaseApproved',
-          source: 'innovation-sandbox',
-          detail: {
-            leaseId: 'lease-123',
-            accountId: '123456789012',
-            status: 'Approved',
-            templateName: undefined,
+            userEmail: 'user@example.gov.uk',
+            approvedBy: undefined,
           },
         };
 
         const result = parseLeaseEvent(event);
-        expect(result.templateName).toBeUndefined();
+        expect(result.approvedBy).toBeUndefined();
       });
 
-      it('should treat null templateName as undefined', () => {
+      it('should treat null approvedBy as undefined', () => {
         const event = {
           version: '0',
-          id: 'event-null-template',
+          id: 'event-null-approver',
           'detail-type': 'LeaseApproved',
           source: 'innovation-sandbox',
           detail: {
             leaseId: 'lease-123',
-            accountId: '123456789012',
-            status: 'Approved',
-            templateName: null,
+            userEmail: 'user@example.gov.uk',
+            approvedBy: null,
           },
         };
 
         const result = parseLeaseEvent(event);
-        expect(result.templateName).toBeUndefined();
+        expect(result.approvedBy).toBeUndefined();
       });
 
-      it('should treat number templateName as undefined', () => {
+      it('should treat number approvedBy as undefined', () => {
         const event = {
           version: '0',
-          id: 'event-number-template',
+          id: 'event-number-approver',
           'detail-type': 'LeaseApproved',
           source: 'innovation-sandbox',
           detail: {
             leaseId: 'lease-123',
-            accountId: '123456789012',
-            status: 'Approved',
-            templateName: 123,
+            userEmail: 'user@example.gov.uk',
+            approvedBy: 123,
           },
         };
 
         const result = parseLeaseEvent(event);
-        expect(result.templateName).toBeUndefined();
+        expect(result.approvedBy).toBeUndefined();
       });
 
-      it('should treat boolean templateName as undefined', () => {
+      it('should treat boolean approvedBy as undefined', () => {
         const event = {
           version: '0',
-          id: 'event-boolean-template',
+          id: 'event-boolean-approver',
           'detail-type': 'LeaseApproved',
           source: 'innovation-sandbox',
           detail: {
             leaseId: 'lease-123',
-            accountId: '123456789012',
-            status: 'Approved',
-            templateName: true,
+            userEmail: 'user@example.gov.uk',
+            approvedBy: true,
           },
         };
 
         const result = parseLeaseEvent(event);
-        expect(result.templateName).toBeUndefined();
+        expect(result.approvedBy).toBeUndefined();
       });
 
-      it('should treat object templateName as undefined', () => {
+      it('should treat object approvedBy as undefined', () => {
         const event = {
           version: '0',
-          id: 'event-object-template',
+          id: 'event-object-approver',
           'detail-type': 'LeaseApproved',
           source: 'innovation-sandbox',
           detail: {
             leaseId: 'lease-123',
-            accountId: '123456789012',
-            status: 'Approved',
-            templateName: { name: 'ec2-instance' },
+            userEmail: 'user@example.gov.uk',
+            approvedBy: { email: 'admin@example.gov.uk' },
           },
         };
 
         const result = parseLeaseEvent(event);
-        expect(result.templateName).toBeUndefined();
+        expect(result.approvedBy).toBeUndefined();
       });
     });
 
@@ -710,8 +525,7 @@ describe('event-parser module', () => {
         const event = {
           detail: {
             leaseId: 'lease-minimal',
-            accountId: '000000000000',
-            status: 'Active',
+            userEmail: 'user@example.gov.uk',
           },
         };
 
@@ -719,9 +533,8 @@ describe('event-parser module', () => {
 
         expect(result).toEqual({
           leaseId: 'lease-minimal',
-          accountId: '000000000000',
-          status: 'Active',
-          templateName: undefined,
+          userEmail: 'user@example.gov.uk',
+          approvedBy: undefined,
         });
       });
 
@@ -730,63 +543,39 @@ describe('event-parser module', () => {
         const event = {
           detail: {
             leaseId: longString,
-            accountId: longString,
-            status: longString,
-            templateName: longString,
+            userEmail: longString + '@example.gov.uk',
+            approvedBy: longString,
           },
         };
 
         const result = parseLeaseEvent(event);
 
         expect(result.leaseId).toBe(longString);
-        expect(result.accountId).toBe(longString);
-        expect(result.status).toBe(longString);
-        expect(result.templateName).toBe(longString);
+        expect(result.userEmail).toBe(longString + '@example.gov.uk');
+        expect(result.approvedBy).toBe(longString);
       });
 
       it('should handle special characters in string values', () => {
         const event = {
           detail: {
             leaseId: 'lease-!@#$%^&*()_+-=[]{}|;:,.<>?',
-            accountId: '账户-123-αβγδ-🎉',
-            status: 'Approved ✓',
-            templateName: 'template/with/slashes',
+            userEmail: 'user+tag@example.gov.uk',
+            approvedBy: 'AUTO_APPROVED',
           },
         };
 
         const result = parseLeaseEvent(event);
 
         expect(result.leaseId).toBe('lease-!@#$%^&*()_+-=[]{}|;:,.<>?');
-        expect(result.accountId).toBe('账户-123-αβγδ-🎉');
-        expect(result.status).toBe('Approved ✓');
-        expect(result.templateName).toBe('template/with/slashes');
+        expect(result.userEmail).toBe('user+tag@example.gov.uk');
+        expect(result.approvedBy).toBe('AUTO_APPROVED');
       });
 
-      it('should handle newlines and tabs in string values', () => {
-        const event = {
-          detail: {
-            leaseId: 'lease\nwith\nnewlines',
-            accountId: 'account\twith\ttabs',
-            status: 'Status\r\nwith\r\ncrlf',
-            templateName: 'template\n\twith\n\tmixed',
-          },
-        };
-
-        const result = parseLeaseEvent(event);
-
-        // These should all pass validation since they have non-whitespace characters
-        expect(result.leaseId).toBe('lease\nwith\nnewlines');
-        expect(result.accountId).toBe('account\twith\ttabs');
-        expect(result.status).toBe('Status\r\nwith\r\ncrlf');
-        expect(result.templateName).toBe('template\n\twith\n\tmixed');
-      });
-
-      it('should parse event with only tabs as whitespace (invalid)', () => {
+      it('should parse event with only tabs as whitespace (invalid leaseId)', () => {
         const event = {
           detail: {
             leaseId: '\t\t\t',
-            accountId: '123456789012',
-            status: 'Approved',
+            userEmail: 'user@example.gov.uk',
           },
         };
 
@@ -795,17 +584,16 @@ describe('event-parser module', () => {
         );
       });
 
-      it('should parse event with only newlines as whitespace (invalid)', () => {
+      it('should parse event with only newlines as whitespace (invalid userEmail)', () => {
         const event = {
           detail: {
             leaseId: 'lease-123',
-            accountId: '\n\n\n',
-            status: 'Approved',
+            userEmail: '\n\n\n',
           },
         };
 
         expect(() => parseLeaseEvent(event)).toThrow(
-          'Event detail must contain a non-empty accountId'
+          'Event detail must contain a non-empty userEmail'
         );
       });
     });
