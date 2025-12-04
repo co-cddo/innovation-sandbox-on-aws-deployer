@@ -9,6 +9,7 @@ const DEFAULTS = {
   GITHUB_PATH: 'cloudformation/scenarios',
   TARGET_ROLE_NAME: 'InnovationSandbox-ndx-DeployerRole',
   AWS_REGION: 'us-west-2',
+  DEPLOY_REGION: 'us-east-1', // Region where CloudFormation stacks are deployed (some features only available in us-east-1)
   EVENT_SOURCE: 'innovation-sandbox',
   LOG_LEVEL: 'INFO' as LogLevel,
 } as const;

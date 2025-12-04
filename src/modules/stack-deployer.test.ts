@@ -76,8 +76,8 @@ describe('stack-deployer', () => {
       });
     });
 
-    it('should create CloudFormation client with correct credentials', async () => {
-      const mockStackId = 'arn:aws:cloudformation:us-west-2:123456789012:stack/test-stack/abc123';
+    it('should create CloudFormation client with correct credentials and us-east-1 region', async () => {
+      const mockStackId = 'arn:aws:cloudformation:us-east-1:123456789012:stack/test-stack/abc123';
 
       mockSend.mockResolvedValue({
         StackId: mockStackId,
@@ -92,6 +92,7 @@ describe('stack-deployer', () => {
       await deployStack(input);
 
       expect(CloudFormationClient).toHaveBeenCalledWith({
+        region: 'us-east-1',
         credentials: {
           accessKeyId: mockCredentials.accessKeyId,
           secretAccessKey: mockCredentials.secretAccessKey,
@@ -388,7 +389,7 @@ describe('stack-deployer', () => {
     });
 
     it('should work with different credential sets', async () => {
-      const mockStackId = 'arn:aws:cloudformation:us-west-2:123456789012:stack/test-stack/abc123';
+      const mockStackId = 'arn:aws:cloudformation:us-east-1:123456789012:stack/test-stack/abc123';
 
       mockSend.mockResolvedValue({
         StackId: mockStackId,
@@ -414,6 +415,7 @@ describe('stack-deployer', () => {
       });
 
       expect(CloudFormationClient).toHaveBeenCalledWith({
+        region: 'us-east-1',
         credentials: {
           accessKeyId: credentials1.accessKeyId,
           secretAccessKey: credentials1.secretAccessKey,
@@ -429,6 +431,7 @@ describe('stack-deployer', () => {
       });
 
       expect(CloudFormationClient).toHaveBeenCalledWith({
+        region: 'us-east-1',
         credentials: {
           accessKeyId: credentials2.accessKeyId,
           secretAccessKey: credentials2.secretAccessKey,

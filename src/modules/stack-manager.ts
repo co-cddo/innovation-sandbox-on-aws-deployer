@@ -5,6 +5,7 @@ import {
 } from '@aws-sdk/client-cloudformation';
 import { deployStack, type DeployStackInput } from './stack-deployer.js';
 import type { AssumedRoleCredentials } from './role-assumer.js';
+import { DEFAULTS } from './config.js';
 
 /**
  * Custom error class for stack management failures
@@ -120,7 +121,9 @@ export async function getStackStatus(
 ): Promise<StackStatusResult> {
   // Create CloudFormation client with assumed role credentials
   // Note: Do NOT use singleton pattern here - create fresh client per call with specific credentials
+  // Query stacks in us-east-1 where they are deployed
   const client = new CloudFormationClient({
+    region: DEFAULTS.DEPLOY_REGION,
     credentials: {
       accessKeyId: credentials.accessKeyId,
       secretAccessKey: credentials.secretAccessKey,
@@ -269,8 +272,9 @@ export async function deployOrUpdateStack(input: DeployStackInput): Promise<Stac
   if (status === StackStatus.ROLLBACK_COMPLETE) {
     console.log(`Stack '${stackName}' is in ${status} state. Deleting stack before recreating...`);
 
-    // Delete the stack
+    // Delete the stack (in us-east-1 where stacks are deployed)
     const client = new CloudFormationClient({
+      region: DEFAULTS.DEPLOY_REGION,
       credentials: {
         accessKeyId: credentials.accessKeyId,
         secretAccessKey: credentials.secretAccessKey,
