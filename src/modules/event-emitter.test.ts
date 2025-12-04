@@ -5,8 +5,12 @@ import { resetConfig } from './config.js';
 
 // Mock the AWS SDK
 vi.mock('@aws-sdk/client-eventbridge', () => ({
-  EventBridgeClient: vi.fn(),
-  PutEventsCommand: vi.fn(),
+  EventBridgeClient: vi.fn(function () {
+    return { send: vi.fn() };
+  }),
+  PutEventsCommand: vi.fn(function (input: unknown) {
+    return { input };
+  }),
 }));
 
 describe('event-emitter module', () => {
@@ -30,13 +34,17 @@ describe('event-emitter module', () => {
     };
 
     // Mock the EventBridgeClient constructor
-    (EventBridgeClient as any).mockImplementation(() => mockEventBridgeClient);
+    (EventBridgeClient as any).mockImplementation(function () {
+      return mockEventBridgeClient;
+    });
 
     // Mock the PutEventsCommand constructor
-    (PutEventsCommand as any).mockImplementation((input: any) => ({
-      input,
-      _isMockCommand: true,
-    }));
+    (PutEventsCommand as any).mockImplementation(function (input: unknown) {
+      return {
+        input,
+        _isMockCommand: true,
+      };
+    });
   });
 
   afterEach(() => {

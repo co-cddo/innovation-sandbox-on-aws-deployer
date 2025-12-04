@@ -10,12 +10,13 @@ import type { AssumedRoleCredentials } from './role-assumer.js';
 
 // Mock the AWS SDK
 vi.mock('@aws-sdk/client-cloudformation', () => {
-  const actualCommand = vi.fn();
   return {
-    CloudFormationClient: vi.fn(() => ({
-      send: vi.fn(),
-    })),
-    CreateStackCommand: actualCommand,
+    CloudFormationClient: vi.fn(function () {
+      return { send: vi.fn() };
+    }),
+    CreateStackCommand: vi.fn(function (input: unknown) {
+      return { input };
+    }),
   };
 });
 
@@ -49,7 +50,9 @@ describe('stack-deployer', () => {
     mockCFClient = {
       send: mockSend,
     };
-    vi.mocked(CloudFormationClient).mockImplementation(() => mockCFClient);
+    vi.mocked(CloudFormationClient).mockImplementation(function () {
+      return mockCFClient;
+    });
   });
 
   describe('deployStack', () => {

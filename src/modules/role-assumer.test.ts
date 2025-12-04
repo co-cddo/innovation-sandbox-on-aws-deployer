@@ -8,12 +8,13 @@ const HUB_ACCOUNT_ID = '568672915267';
 
 // Mock the AWS SDK
 vi.mock('@aws-sdk/client-sts', () => {
-  const actualCommand = vi.fn();
   return {
-    STSClient: vi.fn(() => ({
-      send: vi.fn(),
-    })),
-    AssumeRoleCommand: actualCommand,
+    STSClient: vi.fn(function () {
+      return { send: vi.fn() };
+    }),
+    AssumeRoleCommand: vi.fn(function (input: unknown) {
+      return { input };
+    }),
   };
 });
 
@@ -46,12 +47,11 @@ describe('role-assumer', () => {
 
     // Setup mock STS client - returns different creds for each call
     mockSend = vi.fn();
-    vi.mocked(STSClient).mockImplementation(
-      () =>
-        ({
-          send: mockSend,
-        }) as unknown as STSClient
-    );
+    vi.mocked(STSClient).mockImplementation(function () {
+      return {
+        send: mockSend,
+      } as unknown as STSClient;
+    });
   });
 
   afterEach(() => {
