@@ -13,79 +13,97 @@ The Innovation Sandbox Deployer automates the provisioning of AWS resources in s
 1. Listening for lease approval events via EventBridge
 2. Fetching CloudFormation templates from GitHub
 3. Enriching deployment parameters from DynamoDB lease data
-4. Assuming cross-account IAM roles via STS
-5. Deploying CloudFormation stacks in target accounts
+4. Assuming cross-account IAM roles via STS (double role chain through ISB hub account)
+5. Deploying CloudFormation stacks in target accounts (to us-east-1)
 6. Emitting success/failure events back to EventBridge
 
 This enables a fully automated, event-driven infrastructure provisioning workflow for Innovation Sandbox environments.
 
 ## Architecture
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                        Source Account                           │
-│                                                                 │
-│  ┌─────────────────┐         ┌──────────────────────────────┐  │
-│  │  EventBridge    │         │    DynamoDB                  │  │
-│  │                 │         │    isb-leases                │  │
-│  │  "Lease         │         │                              │  │
-│  │   Approved"     │         │  - leaseId (PK)              │  │
-│  │   Event         │         │  - accountId                 │  │
-│  └────────┬────────┘         │  - templateName              │  │
-│           │                  │  - budgetAmount              │  │
-│           │ triggers         │  - requesterEmail            │  │
-│           ▼                  └──────────────────────────────┘  │
-│  ┌─────────────────────────┐           ▲                      │
-│  │   Lambda Function       │           │                      │
-│  │   isb-deployer          │           │ query lease          │
-│  │                         ├───────────┘                      │
-│  │  1. Parse event         │                                  │
-│  │  2. Lookup lease        │           ┌────────────────────┐ │
-│  │  3. Fetch template      ├──────────▶│   GitHub           │ │
-│  │  4. Assume role         │           │   Raw Content      │ │
-│  │  5. Deploy stack        │           │                    │ │
-│  │  6. Emit status event   │           │   co-cddo/         │ │
-│  └──────────┬──────────────┘           │   ndx_try_aws_     │ │
-│             │                          │   scenarios        │ │
-│             │ AssumeRole               └────────────────────┘ │
-│             │                                                 │
-└─────────────┼─────────────────────────────────────────────────┘
-              │
-              │ sts:AssumeRole
-              │
-              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                      Target Sub-Account                         │
-│                                                                 │
-│  ┌──────────────────────────────────────────────────────────┐  │
-│  │   IAM Role: ndx_IsbUsersPS                               │  │
-│  │                                                          │  │
-│  │   Trust Policy: Allows source account to assume         │  │
-│  │   Permissions: CloudFormation full access               │  │
-│  └────────────────────┬─────────────────────────────────────┘  │
-│                       │                                         │
-│                       │ creates/updates                         │
-│                       ▼                                         │
-│  ┌──────────────────────────────────────────────────────────┐  │
-│  │   CloudFormation Stack                                   │  │
-│  │                                                          │  │
-│  │   Stack Name: isb-{leaseId}-{templateName}              │  │
-│  │   Template: From GitHub                                 │  │
-│  │   Parameters: Enriched from lease data                  │  │
-│  │   Resources: As defined in template                     │  │
-│  └──────────────────────────────────────────────────────────┘  │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TB
+    subgraph source["Source Account (Lambda runs in us-west-2)"]
+        EB[/"EventBridge<br/>LeaseApproved Event"/]
+        DDB[(DynamoDB<br/>isb-leases)]
+        Lambda["Lambda Function<br/>isb-deployer"]
 
-Event Flow:
-1. EventBridge receives "LeaseApproved" event
-2. Lambda triggered and parses event
-3. Lambda queries DynamoDB for lease details
-4. Lambda fetches CloudFormation template from GitHub raw URL
-5. Lambda assumes cross-account IAM role via STS
-6. Lambda creates CloudFormation stack in target account
-7. Lambda emits "Deployment Succeeded" or "Deployment Failed" event
+        EB -->|triggers| Lambda
+        Lambda -->|query lease| DDB
+    end
+
+    subgraph github["GitHub"]
+        GH["Raw Content<br/>co-cddo/ndx_try_aws_scenarios"]
+    end
+
+    Lambda -->|fetch template| GH
+
+    subgraph hub["Hub Account (568672915267)"]
+        IntRole["IAM Role<br/>InnovationSandbox-ndx-IntermediateRole"]
+    end
+
+    Lambda -->|"1. AssumeRole"| IntRole
+
+    subgraph target["Target Sandbox Account"]
+        SandboxRole["IAM Role<br/>InnovationSandbox-ndx-SandboxAccountRole"]
+        CFN["CloudFormation Stack<br/>(deployed to us-east-1)"]
+
+        SandboxRole -->|creates| CFN
+    end
+
+    IntRole -->|"2. AssumeRole"| SandboxRole
 ```
+
+### Event Flow Sequence
+
+```mermaid
+sequenceDiagram
+    participant EB as EventBridge
+    participant Lambda as Lambda Function
+    participant DDB as DynamoDB
+    participant GH as GitHub
+    participant Hub as Hub Account<br/>(IntermediateRole)
+    participant Target as Target Account<br/>(SandboxAccountRole)
+    participant CFN as CloudFormation<br/>(us-east-1)
+
+    EB->>Lambda: LeaseApproved event
+    Lambda->>DDB: Query lease details
+    DDB-->>Lambda: Lease data (accountId, templateName, etc.)
+    Lambda->>GH: Fetch CloudFormation template
+    GH-->>Lambda: Template YAML
+    Lambda->>Hub: STS AssumeRole (IntermediateRole)
+    Hub-->>Lambda: Temporary credentials
+    Lambda->>Target: STS AssumeRole (SandboxAccountRole)
+    Target-->>Lambda: Sandbox credentials
+    Lambda->>CFN: CreateStack (in us-east-1)
+    CFN-->>Lambda: Stack ID
+    Lambda->>EB: Emit "Deployment Succeeded" event
+```
+
+### Role Chain Architecture
+
+ISB uses a double role assumption pattern to comply with Service Control Policies (SCPs) that restrict which roles can operate in sandbox accounts.
+
+```mermaid
+flowchart LR
+    subgraph lambda["Lambda Execution"]
+        L["isb-deployer Lambda"]
+    end
+
+    subgraph hub["Hub Account (568672915267)"]
+        IR["InnovationSandbox-ndx-IntermediateRole"]
+    end
+
+    subgraph sandbox["Sandbox Account"]
+        SR["InnovationSandbox-ndx-SandboxAccountRole"]
+    end
+
+    L -->|"1. sts:AssumeRole"| IR
+    IR -->|"2. sts:AssumeRole<br/>(with intermediate creds)"| SR
+    SR -->|"3. cloudformation:CreateStack<br/>(us-east-1)"| CFN["CloudFormation"]
+```
+
+> **Note:** The Lambda first assumes the IntermediateRole in the hub account, then uses those credentials to assume the SandboxAccountRole in the target account. This works with ISB's SCP configuration which only allows `InnovationSandbox-*` roles to operate in sandbox accounts.
 
 ## Prerequisites
 
@@ -96,7 +114,8 @@ Before deploying this solution, ensure you have:
 - **AWS CLI**: Configured with appropriate credentials
 - **IAM Permissions**: Ability to create Lambda, IAM roles, and EventBridge rules
 - **DynamoDB Table**: Existing table for lease data (e.g., `isb-leases`)
-- **Target Accounts**: Sub-accounts with assumable IAM role (e.g., `ndx_IsbUsersPS`)
+- **Hub Account Access**: IntermediateRole in hub account (568672915267) must trust Lambda's role
+- **Target Accounts**: Sub-accounts with SandboxAccountRole (trusted by IntermediateRole)
 - **GitHub Repository**: Repository containing CloudFormation templates
 - **S3 Bucket**: For storing Lambda deployment artifacts
 
@@ -110,10 +129,11 @@ The Lambda function is configured via the following environment variables:
 | `GITHUB_REPO` | No | `co-cddo/ndx_try_aws_scenarios` | GitHub repository in `owner/name` format containing CloudFormation templates. |
 | `GITHUB_BRANCH` | No | `main` | GitHub branch to fetch templates from. |
 | `GITHUB_PATH` | No | `cloudformation/scenarios` | Path within repository to scenario templates directory. |
-| `TARGET_ROLE_NAME` | No | `ndx_IsbUsersPS` | IAM role name to assume in target sub-accounts for CloudFormation operations. |
 | `AWS_REGION` | No | `us-west-2` | AWS region for Lambda execution and DynamoDB access. |
-| `EVENT_SOURCE` | No | `isb-deployer` | EventBridge source identifier for emitted deployment status events. |
+| `EVENT_SOURCE` | No | `innovation-sandbox` | EventBridge source identifier for emitted deployment status events. |
 | `LOG_LEVEL` | No | `INFO` | Logging verbosity level. Options: `DEBUG`, `INFO`, `WARN`, `ERROR`. |
+
+> **Note:** CloudFormation stacks are always deployed to `us-east-1` regardless of the Lambda's region. This is because some AWS features required by deployed applications are only available in us-east-1. The role chain uses hardcoded ISB role names (`InnovationSandbox-ndx-IntermediateRole` and `InnovationSandbox-ndx-SandboxAccountRole`).
 
 These variables are configured in the CloudFormation template and can be overridden via stack parameters.
 
@@ -202,7 +222,6 @@ export LEASE_TABLE_NAME=dev-isb-leases
 export GITHUB_REPO=co-cddo/ndx_try_aws_scenarios
 export GITHUB_BRANCH=main
 export GITHUB_PATH=cloudformation/scenarios
-export TARGET_ROLE_NAME=ndx_IsbUsersPS
 export AWS_REGION=us-west-2
 export LOG_LEVEL=DEBUG
 
@@ -215,7 +234,6 @@ docker run -p 9000:8080 \
   -e GITHUB_REPO \
   -e GITHUB_BRANCH \
   -e GITHUB_PATH \
-  -e TARGET_ROLE_NAME \
   -e AWS_REGION \
   -e LOG_LEVEL \
   -v $PWD/dist:/var/task \
@@ -266,7 +284,6 @@ aws cloudformation deploy \
     GithubRepo=co-cddo/ndx_try_aws_scenarios \
     GithubBranch=main \
     GithubPath=cloudformation/scenarios \
-    TargetRoleName=ndx_IsbUsersPS \
     EventSource=innovation-sandbox \
   --capabilities CAPABILITY_NAMED_IAM \
   --region us-west-2
@@ -307,7 +324,6 @@ The project includes a GitHub Actions workflow (`.github/workflows/ci.yml`) that
 
 - `LEASE_TABLE_NAME`: DynamoDB table name
 - `AWS_REGION`: AWS region (default: `us-west-2`)
-- `TARGET_ROLE_NAME`: IAM role in target accounts (optional)
 - `GITHUB_REPO`: Template repository (optional)
 - `GITHUB_BRANCH`: Template branch (optional)
 - `GITHUB_PATH`: Template path (optional)
@@ -325,7 +341,6 @@ The following parameters can be customized during stack deployment:
 | `GithubRepo` | String | `co-cddo/ndx_try_aws_scenarios` | GitHub repository for templates. |
 | `GithubBranch` | String | `main` | GitHub branch for templates. |
 | `GithubPath` | String | `cloudformation/scenarios` | Path to templates in repository. |
-| `TargetRoleName` | String | `ndx_IsbUsersPS` | IAM role name in target accounts. |
 | `EventSource` | String | `innovation-sandbox` | EventBridge source filter. |
 | `ArtifactBucket` | String | - | S3 bucket containing Lambda deployment package. |
 | `ArtifactKey` | String | `lambda/handler.zip` | S3 key for Lambda deployment package. |
@@ -357,11 +372,27 @@ The lease table must have the following structure:
 }
 ```
 
-### Target Account IAM Role
+### ISB Role Chain Configuration
 
-Each target sub-account must have an assumable IAM role with:
+The deployer uses ISB's double role chain pattern to comply with Service Control Policies:
 
-**Trust Policy:**
+```mermaid
+flowchart TD
+    A["Lambda assumes IntermediateRole<br/>in Hub Account (568672915267)"] --> B["Use intermediate creds to assume<br/>SandboxAccountRole in Target Account"]
+    B --> C["Deploy CloudFormation stack<br/>to us-east-1"]
+```
+
+**Hub Account Role (IntermediateRole):**
+- Role Name: `InnovationSandbox-ndx-IntermediateRole`
+- Account: `568672915267`
+- Must trust the Lambda's execution role
+
+**Target Account Role (SandboxAccountRole):**
+- Role Name: `InnovationSandbox-ndx-SandboxAccountRole`
+- Must trust the IntermediateRole from the hub account
+- Requires CloudFormation permissions for `us-east-1`
+
+**Trust Policy for SandboxAccountRole:**
 
 ```json
 {
@@ -370,7 +401,7 @@ Each target sub-account must have an assumable IAM role with:
     {
       "Effect": "Allow",
       "Principal": {
-        "AWS": "arn:aws:iam::SOURCE_ACCOUNT_ID:role/isb-deployer-role-ENV"
+        "AWS": "arn:aws:iam::568672915267:role/InnovationSandbox-ndx-IntermediateRole"
       },
       "Action": "sts:AssumeRole"
     }
@@ -380,10 +411,11 @@ Each target sub-account must have an assumable IAM role with:
 
 **Permissions Policy:**
 
-Attach `CloudFormationFullAccess` or a custom policy allowing:
+Attach a policy allowing CloudFormation operations in `us-east-1`:
 - `cloudformation:CreateStack`
 - `cloudformation:UpdateStack`
 - `cloudformation:DescribeStacks`
+- `cloudformation:DeleteStack`
 - `cloudformation:GetTemplate`
 - Resource-specific permissions (e.g., EC2, S3, IAM) based on templates
 
@@ -431,7 +463,7 @@ The Lambda function emits deployment status events back to EventBridge:
     "accountId": "987654321098",
     "templateName": "ec2-instance",
     "stackName": "isb-lease-001-ec2-instance",
-    "stackId": "arn:aws:cloudformation:us-west-2:987654321098:stack/..."
+    "stackId": "arn:aws:cloudformation:us-east-1:987654321098:stack/..."
   }
 }
 ```
@@ -507,7 +539,7 @@ Set `LOG_LEVEL` environment variable to control verbosity:
 3. GitHub repository is private (Lambda requires public repositories)
 
 **Solution:**
-- Verify template exists at: `https://raw.githubusercontent.com/{GITHUB_REPO}/{GITHUB_BRANCH}/{GITHUB_PATH}/{templateName}.yaml`
+- Verify template exists at: `https://raw.githubusercontent.com/{GITHUB_REPO}/{GITHUB_BRANCH}/{GITHUB_PATH}/{templateName}/template.yaml`
 - Check environment variables in Lambda console
 - Enable DEBUG logging to see constructed URL
 
@@ -516,14 +548,16 @@ Set `LOG_LEVEL` environment variable to control verbosity:
 **Symptom**: Lambda fails with STS AssumeRole access denied
 
 **Causes:**
-1. Target account IAM role doesn't exist
-2. Trust policy doesn't allow source account to assume role
-3. Role name mismatch (check `TARGET_ROLE_NAME`)
+1. IntermediateRole in hub account (568672915267) doesn't trust Lambda's execution role
+2. SandboxAccountRole in target account doesn't trust IntermediateRole
+3. Role name mismatch in the chain
+4. ISB SCP blocking non-InnovationSandbox roles
 
 **Solution:**
-- Verify IAM role exists in target account: `aws iam get-role --role-name ndx_IsbUsersPS`
-- Check trust policy allows source account
-- Verify `TARGET_ROLE_NAME` environment variable matches actual role name
+- Verify IntermediateRole exists in hub account: `arn:aws:iam::568672915267:role/InnovationSandbox-ndx-IntermediateRole`
+- Check SandboxAccountRole exists in target account
+- Verify trust policies allow the role chain
+- Ensure role names follow `InnovationSandbox-*` pattern for SCP compliance
 
 #### Issue: "Lease not found in DynamoDB"
 
@@ -546,14 +580,14 @@ Set `LOG_LEVEL` environment variable to control verbosity:
 **Causes:**
 1. Template syntax errors
 2. Missing required parameters
-3. Insufficient permissions in target account role
-4. Resource limits or quotas exceeded
+3. Insufficient permissions in SandboxAccountRole
+4. Resource limits or quotas exceeded in us-east-1
 
 **Solution:**
-- Check CloudFormation console in target account for error details
+- Check CloudFormation console in target account (**us-east-1 region**) for error details
 - Validate template locally: `aws cloudformation validate-template --template-body file://template.yaml`
-- Review assumed role permissions
-- Check AWS service quotas
+- Review SandboxAccountRole permissions
+- Check AWS service quotas in us-east-1
 
 ### Troubleshooting Commands
 
@@ -574,10 +608,10 @@ aws lambda get-function --function-name isb-deployer-dev \
 # Check EventBridge rule
 aws events list-rules --name-prefix isb-deployer
 
-# Describe CloudFormation stack in target account (requires assumed role)
+# Describe CloudFormation stack in target account (requires assumed role, us-east-1)
 aws cloudformation describe-stacks \
   --stack-name isb-lease-001-ec2-instance \
-  --region us-west-2 \
+  --region us-east-1 \
   --profile target-account
 ```
 
@@ -586,40 +620,42 @@ aws cloudformation describe-stacks \
 ```
 innovation-sandbox-on-aws-deployer/
 ├── src/
-│   ├── handler.ts              # Lambda entry point
+│   ├── handler.ts                    # Lambda entry point
 │   ├── modules/
-│   │   ├── config.ts           # Configuration management
-│   │   ├── logger.ts           # Structured logging
-│   │   ├── event-parser.ts    # Event parsing and validation
-│   │   ├── event-emitter.ts   # EventBridge event emission
-│   │   └── utils.ts            # Utility functions (URL, stack name)
+│   │   ├── config.ts                 # Configuration management
+│   │   ├── logger.ts                 # Structured logging
+│   │   ├── event-parser.ts           # Event parsing and validation
+│   │   ├── event-emitter.ts          # EventBridge event emission
+│   │   ├── github-url.ts             # GitHub URL construction
+│   │   ├── template-fetcher.ts       # Template fetching from GitHub
+│   │   ├── template-validator.ts     # CloudFormation template validation
+│   │   ├── lease-lookup.ts           # DynamoDB lease queries
+│   │   ├── role-assumer.ts           # STS role chain assumption
+│   │   ├── stack-name.ts             # Stack name generation
+│   │   ├── stack-deployer.ts         # CloudFormation deployment
+│   │   ├── stack-manager.ts          # Idempotent stack operations
+│   │   ├── parameter-mapper.ts       # Parameter enrichment
+│   │   ├── deployment-orchestrator.ts # Main deployment logic
+│   │   └── deployment-events.ts      # Deployment event handling
 │   └── types/
-│       └── index.ts            # TypeScript type definitions
-├── tests/
-│   ├── unit/
-│   │   ├── config.test.ts
-│   │   ├── logger.test.ts
-│   │   ├── event-parser.test.ts
-│   │   ├── event-emitter.test.ts
-│   │   └── utils.test.ts
-│   └── __fixtures__/           # Test fixtures and mock data
+│       └── index.ts                  # TypeScript type definitions
 ├── infrastructure/
-│   ├── template.yaml           # CloudFormation template
+│   ├── template.yaml                 # CloudFormation template
 │   └── parameters/
-│       ├── dev.json            # Development environment parameters
-│       ├── staging.json        # Staging environment parameters
-│       └── prod.json           # Production environment parameters
+│       ├── dev.json                  # Development environment parameters
+│       ├── staging.json              # Staging environment parameters
+│       └── prod.json                 # Production environment parameters
 ├── .github/
 │   └── workflows/
-│       └── ci.yml              # GitHub Actions CI/CD pipeline
-├── dist/                       # Build output (gitignored)
-├── coverage/                   # Test coverage reports (gitignored)
-├── package.json                # Node.js dependencies and scripts
-├── tsconfig.json               # TypeScript configuration
-├── vitest.config.ts            # Vitest test configuration
-├── .eslintrc.cjs               # ESLint configuration
-├── .prettierrc                 # Prettier configuration
-└── README.md                   # This file
+│       └── ci.yml                    # GitHub Actions CI/CD pipeline
+├── dist/                             # Build output (gitignored)
+├── coverage/                         # Test coverage reports (gitignored)
+├── package.json                      # Node.js dependencies and scripts
+├── tsconfig.json                     # TypeScript configuration
+├── vitest.config.ts                  # Vitest test configuration
+├── eslint.config.js                  # ESLint configuration
+├── .prettierrc                       # Prettier configuration
+└── README.md                         # This file
 ```
 
 ## Contributing
