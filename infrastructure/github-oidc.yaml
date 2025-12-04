@@ -1,0 +1,332 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'GitHub Actions OIDC Provider and Deploy Role for Innovation Sandbox Deployer'
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: 'GitHub Repository Configuration'
+        Parameters:
+          - GitHubOrg
+          - GitHubRepo
+          - GitHubBranch
+      - Label:
+          default: 'OIDC Provider Configuration'
+        Parameters:
+          - CreateOIDCProvider
+          - OIDCProviderArn
+      - Label:
+          default: 'Deployment Configuration'
+        Parameters:
+          - Environment
+          - ArtifactBucketName
+    ParameterLabels:
+      GitHubOrg:
+        default: 'GitHub Organization'
+      GitHubRepo:
+        default: 'GitHub Repository Name'
+      GitHubBranch:
+        default: 'Allowed Branch'
+      CreateOIDCProvider:
+        default: 'Create OIDC Provider?'
+      OIDCProviderArn:
+        default: 'Existing OIDC Provider ARN'
+      Environment:
+        default: 'Environment'
+      ArtifactBucketName:
+        default: 'S3 Artifact Bucket Name'
+
+Parameters:
+  GitHubOrg:
+    Type: String
+    Description: 'GitHub organization or username'
+    Default: 'co-cddo'
+    MinLength: 1
+    MaxLength: 39
+    AllowedPattern: '[a-zA-Z0-9-]+'
+
+  GitHubRepo:
+    Type: String
+    Description: 'GitHub repository name (without org prefix)'
+    Default: 'innovation-sandbox-on-aws-deployer'
+    MinLength: 1
+    MaxLength: 100
+    AllowedPattern: '[a-zA-Z0-9_.-]+'
+
+  GitHubBranch:
+    Type: String
+    Description: 'Branch allowed to assume this role (use * for any branch)'
+    Default: 'main'
+    MinLength: 1
+    MaxLength: 255
+
+  CreateOIDCProvider:
+    Type: String
+    Description: 'Create a new GitHub OIDC provider. Set to false if one already exists in this account.'
+    Default: 'true'
+    AllowedValues:
+      - 'true'
+      - 'false'
+
+  OIDCProviderArn:
+    Type: String
+    Description: 'ARN of existing GitHub OIDC provider (required if CreateOIDCProvider is false)'
+    Default: ''
+
+  Environment:
+    Type: String
+    Default: 'prod'
+    AllowedValues:
+      - dev
+      - staging
+      - prod
+    Description: 'Deployment environment'
+
+  ArtifactBucketName:
+    Type: String
+    Description: 'S3 bucket name for Lambda deployment artifacts'
+    MinLength: 3
+    MaxLength: 63
+    AllowedPattern: '[a-z0-9][a-z0-9.-]*[a-z0-9]'
+
+Conditions:
+  ShouldCreateOIDCProvider: !Equals [!Ref CreateOIDCProvider, 'true']
+  UseExistingOIDCProvider: !Not [!Condition ShouldCreateOIDCProvider]
+
+Resources:
+  # GitHub OIDC Identity Provider
+  # Only created if CreateOIDCProvider is true
+  # Note: Only ONE GitHub OIDC provider can exist per AWS account
+  GitHubOIDCProvider:
+    Type: AWS::IAM::OIDCProvider
+    Condition: ShouldCreateOIDCProvider
+    Properties:
+      Url: 'https://token.actions.githubusercontent.com'
+      ClientIdList:
+        - 'sts.amazonaws.com'
+      ThumbprintList:
+        # GitHub's OIDC thumbprints (these are stable and provided by GitHub)
+        - '6938fd4d98bab03faadb97b34396831e3780aea1'
+        - '1c58a3a8518e8759bf075b76b750d4f2df264fcd'
+      Tags:
+        - Key: Application
+          Value: 'github-actions-oidc'
+        - Key: ManagedBy
+          Value: 'CloudFormation'
+
+  # IAM Role for GitHub Actions to assume
+  # Restricted to specific repository and branch
+  GitHubActionsDeployRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub 'github-actions-${GitHubRepo}-deploy'
+      Description: !Sub 'Role for GitHub Actions to deploy ${GitHubOrg}/${GitHubRepo}'
+      MaxSessionDuration: 3600
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: !If
+                - ShouldCreateOIDCProvider
+                - !GetAtt GitHubOIDCProvider.Arn
+                - !Ref OIDCProviderArn
+            Action: 'sts:AssumeRoleWithWebIdentity'
+            Condition:
+              StringEquals:
+                'token.actions.githubusercontent.com:aud': 'sts.amazonaws.com'
+              StringLike:
+                # Restrict to specific repo and branch
+                'token.actions.githubusercontent.com:sub': !Sub 'repo:${GitHubOrg}/${GitHubRepo}:ref:refs/heads/${GitHubBranch}'
+      Policies:
+        # CloudFormation permissions for stack deployment
+        - PolicyName: CloudFormationDeployment
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: CloudFormationStackOperations
+                Effect: Allow
+                Action:
+                  - 'cloudformation:CreateStack'
+                  - 'cloudformation:UpdateStack'
+                  - 'cloudformation:DeleteStack'
+                  - 'cloudformation:DescribeStacks'
+                  - 'cloudformation:DescribeStackEvents'
+                  - 'cloudformation:DescribeStackResources'
+                  - 'cloudformation:GetTemplate'
+                  - 'cloudformation:ValidateTemplate'
+                  - 'cloudformation:CreateChangeSet'
+                  - 'cloudformation:DescribeChangeSet'
+                  - 'cloudformation:ExecuteChangeSet'
+                  - 'cloudformation:DeleteChangeSet'
+                  - 'cloudformation:ListStackResources'
+                Resource:
+                  - !Sub 'arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/isb-deployer*/*'
+                  - !Sub 'arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/isb-deployer*'
+
+        # S3 permissions for Lambda artifact upload
+        - PolicyName: S3ArtifactAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: S3BucketAccess
+                Effect: Allow
+                Action:
+                  - 's3:GetObject'
+                  - 's3:PutObject'
+                  - 's3:DeleteObject'
+                  - 's3:ListBucket'
+                Resource:
+                  - !Sub 'arn:aws:s3:::${ArtifactBucketName}'
+                  - !Sub 'arn:aws:s3:::${ArtifactBucketName}/*'
+
+        # Lambda permissions for function deployment
+        - PolicyName: LambdaDeployment
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: LambdaFunctionOperations
+                Effect: Allow
+                Action:
+                  - 'lambda:CreateFunction'
+                  - 'lambda:UpdateFunctionCode'
+                  - 'lambda:UpdateFunctionConfiguration'
+                  - 'lambda:DeleteFunction'
+                  - 'lambda:GetFunction'
+                  - 'lambda:GetFunctionConfiguration'
+                  - 'lambda:ListVersionsByFunction'
+                  - 'lambda:PublishVersion'
+                  - 'lambda:AddPermission'
+                  - 'lambda:RemovePermission'
+                  - 'lambda:TagResource'
+                  - 'lambda:UntagResource'
+                Resource:
+                  - !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:isb-deployer*'
+
+        # IAM permissions for Lambda execution role management
+        - PolicyName: IAMRoleManagement
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: IAMRoleOperations
+                Effect: Allow
+                Action:
+                  - 'iam:CreateRole'
+                  - 'iam:DeleteRole'
+                  - 'iam:GetRole'
+                  - 'iam:UpdateRole'
+                  - 'iam:PassRole'
+                  - 'iam:AttachRolePolicy'
+                  - 'iam:DetachRolePolicy'
+                  - 'iam:PutRolePolicy'
+                  - 'iam:DeleteRolePolicy'
+                  - 'iam:GetRolePolicy'
+                  - 'iam:TagRole'
+                  - 'iam:UntagRole'
+                Resource:
+                  - !Sub 'arn:aws:iam::${AWS::AccountId}:role/isb-deployer*'
+              - Sid: IAMPolicyRead
+                Effect: Allow
+                Action:
+                  - 'iam:GetPolicy'
+                  - 'iam:GetPolicyVersion'
+                Resource: '*'
+
+        # EventBridge permissions for rule management
+        - PolicyName: EventBridgeManagement
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: EventBridgeRuleOperations
+                Effect: Allow
+                Action:
+                  - 'events:PutRule'
+                  - 'events:DeleteRule'
+                  - 'events:DescribeRule'
+                  - 'events:EnableRule'
+                  - 'events:DisableRule'
+                  - 'events:PutTargets'
+                  - 'events:RemoveTargets'
+                  - 'events:ListTargetsByRule'
+                  - 'events:TagResource'
+                  - 'events:UntagResource'
+                Resource:
+                  - !Sub 'arn:aws:events:${AWS::Region}:${AWS::AccountId}:rule/isb-deployer*'
+                  - !Sub 'arn:aws:events:${AWS::Region}:${AWS::AccountId}:event-bus/default'
+
+        # DynamoDB permissions for table management (if creating table)
+        - PolicyName: DynamoDBManagement
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: DynamoDBTableOperations
+                Effect: Allow
+                Action:
+                  - 'dynamodb:CreateTable'
+                  - 'dynamodb:DeleteTable'
+                  - 'dynamodb:DescribeTable'
+                  - 'dynamodb:UpdateTable'
+                  - 'dynamodb:TagResource'
+                  - 'dynamodb:UntagResource'
+                Resource:
+                  - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/isb-*'
+
+        # CloudWatch Logs permissions for Lambda log group
+        - PolicyName: CloudWatchLogsManagement
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: LogGroupOperations
+                Effect: Allow
+                Action:
+                  - 'logs:CreateLogGroup'
+                  - 'logs:DeleteLogGroup'
+                  - 'logs:PutRetentionPolicy'
+                  - 'logs:TagResource'
+                Resource:
+                  - !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/isb-deployer*'
+
+      Tags:
+        - Key: Application
+          Value: 'innovation-sandbox-deployer'
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: GitHubRepo
+          Value: !Sub '${GitHubOrg}/${GitHubRepo}'
+        - Key: ManagedBy
+          Value: 'CloudFormation'
+
+Outputs:
+  OIDCProviderArn:
+    Description: 'ARN of the GitHub OIDC provider'
+    Value: !If
+      - ShouldCreateOIDCProvider
+      - !GetAtt GitHubOIDCProvider.Arn
+      - !Ref OIDCProviderArn
+    Export:
+      Name: !Sub '${AWS::StackName}-OIDCProviderArn'
+
+  DeployRoleArn:
+    Description: 'ARN of the GitHub Actions deploy role (use this in GitHub secrets as AWS_DEPLOY_ROLE_ARN)'
+    Value: !GetAtt GitHubActionsDeployRole.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-DeployRoleArn'
+
+  DeployRoleName:
+    Description: 'Name of the GitHub Actions deploy role'
+    Value: !Ref GitHubActionsDeployRole
+    Export:
+      Name: !Sub '${AWS::StackName}-DeployRoleName'
+
+  GitHubRepoConfig:
+    Description: 'GitHub repository this role is configured for'
+    Value: !Sub '${GitHubOrg}/${GitHubRepo}:${GitHubBranch}'
+
+  SetupInstructions:
+    Description: 'Next steps to complete GitHub Actions OIDC setup'
+    Value: !Sub |
+      1. Copy the DeployRoleArn output value
+      2. In GitHub repo settings, go to Secrets and Variables > Actions
+      3. Add secret: AWS_DEPLOY_ROLE_ARN = ${GitHubActionsDeployRole.Arn}
+      4. Add variable: AWS_REGION = ${AWS::Region}
+      5. Push to main branch to trigger deployment
