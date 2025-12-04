@@ -8,6 +8,55 @@
 import yaml from 'js-yaml';
 
 /**
+ * CloudFormation intrinsic function tags that need custom handling
+ * These are treated as passthrough types that preserve their structure
+ */
+const CF_INTRINSIC_TAGS = [
+  '!Ref',
+  '!Sub',
+  '!GetAtt',
+  '!Join',
+  '!Select',
+  '!Split',
+  '!If',
+  '!Not',
+  '!Equals',
+  '!And',
+  '!Or',
+  '!Condition',
+  '!Base64',
+  '!Cidr',
+  '!FindInMap',
+  '!GetAZs',
+  '!ImportValue',
+  '!Transform',
+];
+
+/**
+ * Create custom YAML types for CloudFormation intrinsic functions
+ * These handlers preserve the tag and value as an object
+ */
+const cfTypes = CF_INTRINSIC_TAGS.flatMap((tag) => [
+  new yaml.Type(tag, {
+    kind: 'scalar',
+    construct: (data: unknown) => ({ [tag.substring(1)]: data }),
+  }),
+  new yaml.Type(tag, {
+    kind: 'sequence',
+    construct: (data: unknown) => ({ [tag.substring(1)]: data }),
+  }),
+  new yaml.Type(tag, {
+    kind: 'mapping',
+    construct: (data: unknown) => ({ [tag.substring(1)]: data }),
+  }),
+]);
+
+/**
+ * Custom YAML schema that extends the default schema with CloudFormation intrinsic functions
+ */
+const CF_SCHEMA = yaml.DEFAULT_SCHEMA.extend(cfTypes);
+
+/**
  * Custom error class for template validation failures
  */
 export class TemplateValidationError extends Error {
@@ -68,10 +117,10 @@ export function validateTemplate(yamlContent: string): ValidatedTemplate {
     throw new TemplateValidationError('Template content cannot be empty');
   }
 
-  // Parse YAML content
+  // Parse YAML content using CloudFormation-aware schema
   let parsed: unknown;
   try {
-    parsed = yaml.load(yamlContent);
+    parsed = yaml.load(yamlContent, { schema: CF_SCHEMA });
   } catch (error) {
     // Handle YAML parsing errors
     if (error instanceof Error) {

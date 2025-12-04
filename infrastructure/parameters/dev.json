@@ -4,6 +4,14 @@
     "ParameterValue": "dev"
   },
   {
+    "ParameterKey": "CreateLeaseTable",
+    "ParameterValue": "true"
+  },
+  {
+    "ParameterKey": "CreateArtifactBucket",
+    "ParameterValue": "true"
+  },
+  {
     "ParameterKey": "LeaseTableName",
     "ParameterValue": "dev-isb-leases"
   },
