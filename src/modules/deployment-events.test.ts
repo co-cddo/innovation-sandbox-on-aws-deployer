@@ -39,7 +39,7 @@ describe('deployment-events module', () => {
         leaseId: 'lease-12345',
         accountId: '123456789012',
         stackName: 'basic-vpc-lease-12345',
-        stackId: 'arn:aws:cloudformation:eu-west-2:123456789012:stack/basic-vpc-lease-12345/guid',
+        stackId: 'arn:aws:cloudformation:us-west-2:123456789012:stack/basic-vpc-lease-12345/guid',
         templateName: 'basic-vpc',
         action: 'created',
         timestamp: '2025-12-03T12:00:00.000Z',
@@ -76,7 +76,7 @@ describe('deployment-events module', () => {
         leaseId: 'lease-67890',
         accountId: '987654321098',
         stackName: 'test-stack',
-        stackId: 'arn:aws:cloudformation:eu-west-2:987654321098:stack/test-stack/guid',
+        stackId: 'arn:aws:cloudformation:us-west-2:987654321098:stack/test-stack/guid',
         action: 'exists',
         timestamp: '2025-12-03T13:00:00.000Z',
       };
@@ -103,7 +103,7 @@ describe('deployment-events module', () => {
         leaseId: 'lease-111',
         accountId: '111111111111',
         stackName: 'new-stack',
-        stackId: 'arn:aws:cloudformation:eu-west-2:111111111111:stack/new-stack/guid',
+        stackId: 'arn:aws:cloudformation:us-west-2:111111111111:stack/new-stack/guid',
         templateName: 'example',
         action: 'created',
         timestamp: '2025-12-03T14:00:00.000Z',
@@ -128,7 +128,7 @@ describe('deployment-events module', () => {
         leaseId: 'lease-222',
         accountId: '222222222222',
         stackName: 'existing-stack',
-        stackId: 'arn:aws:cloudformation:eu-west-2:222222222222:stack/existing-stack/guid',
+        stackId: 'arn:aws:cloudformation:us-west-2:222222222222:stack/existing-stack/guid',
         action: 'exists',
         timestamp: '2025-12-03T15:00:00.000Z',
       };
@@ -145,7 +145,7 @@ describe('deployment-events module', () => {
         leaseId: 'lease-333',
         accountId: '333333333333',
         stackName: 'in-progress-stack',
-        stackId: 'arn:aws:cloudformation:eu-west-2:333333333333:stack/in-progress-stack/guid',
+        stackId: 'arn:aws:cloudformation:us-west-2:333333333333:stack/in-progress-stack/guid',
         action: 'skipped',
         timestamp: '2025-12-03T16:00:00.000Z',
       };
@@ -162,7 +162,7 @@ describe('deployment-events module', () => {
         leaseId: 'lease-444',
         accountId: '444444444444',
         stackName: 'no-logger-stack',
-        stackId: 'arn:aws:cloudformation:eu-west-2:444444444444:stack/no-logger-stack/guid',
+        stackId: 'arn:aws:cloudformation:us-west-2:444444444444:stack/no-logger-stack/guid',
         action: 'created',
         timestamp: '2025-12-03T17:00:00.000Z',
       };
@@ -181,7 +181,7 @@ describe('deployment-events module', () => {
         leaseId: 'lease-555',
         accountId: '555555555555',
         stackName: 'error-stack',
-        stackId: 'arn:aws:cloudformation:eu-west-2:555555555555:stack/error-stack/guid',
+        stackId: 'arn:aws:cloudformation:us-west-2:555555555555:stack/error-stack/guid',
         action: 'created',
         timestamp: '2025-12-03T18:00:00.000Z',
       };
@@ -221,7 +221,7 @@ describe('deployment-events module', () => {
         accountId: '666666666666',
         stackName: 'no-logger-error-stack',
         stackId:
-          'arn:aws:cloudformation:eu-west-2:666666666666:stack/no-logger-error-stack/guid',
+          'arn:aws:cloudformation:us-west-2:666666666666:stack/no-logger-error-stack/guid',
         action: 'created',
         timestamp: '2025-12-03T19:00:00.000Z',
       };
@@ -251,7 +251,7 @@ describe('deployment-events module', () => {
         leaseId: 'lease-777',
         accountId: '777777777777',
         stackName: 'non-error-stack',
-        stackId: 'arn:aws:cloudformation:eu-west-2:777777777777:stack/non-error-stack/guid',
+        stackId: 'arn:aws:cloudformation:us-west-2:777777777777:stack/non-error-stack/guid',
         action: 'created',
         timestamp: '2025-12-03T20:00:00.000Z',
       };
@@ -277,7 +277,7 @@ describe('deployment-events module', () => {
         accountId: '888888888888',
         stackName: 'correlation-stack',
         stackId:
-          'arn:aws:cloudformation:eu-west-2:888888888888:stack/correlation-stack/guid',
+          'arn:aws:cloudformation:us-west-2:888888888888:stack/correlation-stack/guid',
         action: 'created',
         timestamp: '2025-12-03T21:00:00.000Z',
       };
@@ -305,7 +305,7 @@ describe('deployment-events module', () => {
         leaseId: 'lease-999',
         accountId: '999999999999',
         stackName: 'stack-name-test',
-        stackId: 'arn:aws:cloudformation:eu-west-2:999999999999:stack/stack-name-test/guid',
+        stackId: 'arn:aws:cloudformation:us-west-2:999999999999:stack/stack-name-test/guid',
         action: 'created',
         timestamp: '2025-12-03T22:00:00.000Z',
       };
@@ -333,7 +333,7 @@ describe('deployment-events module', () => {
         leaseId: 'lease-complete',
         accountId: '000000000000',
         stackName: 'complete-stack',
-        stackId: 'arn:aws:cloudformation:eu-west-2:000000000000:stack/complete-stack/guid',
+        stackId: 'arn:aws:cloudformation:us-west-2:000000000000:stack/complete-stack/guid',
         templateName: 'complete-template',
         action: 'created',
         timestamp: '2025-12-03T23:00:00.000Z',
@@ -346,7 +346,7 @@ describe('deployment-events module', () => {
         leaseId: 'lease-complete',
         accountId: '000000000000',
         stackName: 'complete-stack',
-        stackId: 'arn:aws:cloudformation:eu-west-2:000000000000:stack/complete-stack/guid',
+        stackId: 'arn:aws:cloudformation:us-west-2:000000000000:stack/complete-stack/guid',
         templateName: 'complete-template',
         action: 'created',
         timestamp: '2025-12-03T23:00:00.000Z',

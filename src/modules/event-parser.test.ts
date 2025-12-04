@@ -13,7 +13,7 @@ describe('event-parser module', () => {
           source: 'innovation-sandbox',
           account: '123456789012',
           time: '2024-01-01T00:00:00Z',
-          region: 'eu-west-2',
+          region: 'us-west-2',
           detail: {
             leaseId: 'lease-abc-123',
             accountId: '987654321098',
@@ -39,7 +39,7 @@ describe('event-parser module', () => {
           source: 'innovation-sandbox',
           account: '123456789012',
           time: '2024-01-01T00:00:00Z',
-          region: 'eu-west-2',
+          region: 'us-west-2',
           detail: {
             leaseId: 'lease-xyz-789',
             accountId: '111222333444',
@@ -66,7 +66,7 @@ describe('event-parser module', () => {
           source: 'innovation-sandbox',
           account: '123456789012',
           time: '2024-01-01T00:00:00Z',
-          region: 'eu-west-2',
+          region: 'us-west-2',
           detail: {
             leaseId: 'lease-extra-001',
             accountId: '555666777888',
@@ -96,7 +96,7 @@ describe('event-parser module', () => {
           source: 'innovation-sandbox',
           account: '123456789012',
           time: '2024-01-01T00:00:00Z',
-          region: 'eu-west-2',
+          region: 'us-west-2',
           detail: {
             leaseId: 'lease-001',
             accountId: '999888777666',
@@ -118,7 +118,7 @@ describe('event-parser module', () => {
           source: 'innovation-sandbox',
           account: '123456789012',
           time: '2024-01-01T00:00:00Z',
-          region: 'eu-west-2',
+          region: 'us-west-2',
           detail: {
             leaseId: 'lease-002',
             accountId: '888777666555',
@@ -143,7 +143,7 @@ describe('event-parser module', () => {
             source: 'innovation-sandbox',
             account: '123456789012',
             time: '2024-01-01T00:00:00Z',
-            region: 'eu-west-2',
+            region: 'us-west-2',
             detail: {
               leaseId: 'lease-status-test',
               accountId: '123456789012',
@@ -164,7 +164,7 @@ describe('event-parser module', () => {
           source: 'innovation-sandbox',
           account: '123456789012',
           time: '2024-01-01T00:00:00Z',
-          region: 'eu-west-2',
+          region: 'us-west-2',
           detail: {
             leaseId: '  lease-trim-001  ',
             accountId: '  999888777666  ',

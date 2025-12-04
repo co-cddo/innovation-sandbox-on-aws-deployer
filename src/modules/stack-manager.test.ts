@@ -93,7 +93,7 @@ describe('stack-manager', () => {
     });
 
     it('should return stack status when stack exists', async () => {
-      const mockStackId = 'arn:aws:cloudformation:eu-west-2:123456789012:stack/test-stack/abc123';
+      const mockStackId = 'arn:aws:cloudformation:us-west-2:123456789012:stack/test-stack/abc123';
 
       mockSend.mockResolvedValue({
         Stacks: [
@@ -119,7 +119,7 @@ describe('stack-manager', () => {
       mockSend.mockResolvedValue({
         Stacks: [
           {
-            StackId: 'arn:aws:cloudformation:eu-west-2:123456789012:stack/test-stack/abc123',
+            StackId: 'arn:aws:cloudformation:us-west-2:123456789012:stack/test-stack/abc123',
             StackName: 'test-stack',
             StackStatus: 'CREATE_COMPLETE',
           },
@@ -137,7 +137,7 @@ describe('stack-manager', () => {
       mockSend.mockResolvedValue({
         Stacks: [
           {
-            StackId: 'arn:aws:cloudformation:eu-west-2:123456789012:stack/test-stack/abc123',
+            StackId: 'arn:aws:cloudformation:us-west-2:123456789012:stack/test-stack/abc123',
             StackName: 'test-stack',
             StackStatus: 'CREATE_COMPLETE',
           },
@@ -188,7 +188,7 @@ describe('stack-manager', () => {
       mockSend.mockResolvedValue({
         Stacks: [
           {
-            StackId: 'arn:aws:cloudformation:eu-west-2:123456789012:stack/test-stack/abc123',
+            StackId: 'arn:aws:cloudformation:us-west-2:123456789012:stack/test-stack/abc123',
             StackName: 'test-stack',
             // Missing StackStatus
           },
@@ -212,7 +212,7 @@ describe('stack-manager', () => {
     });
 
     it('should handle UPDATE_COMPLETE status', async () => {
-      const mockStackId = 'arn:aws:cloudformation:eu-west-2:123456789012:stack/test-stack/abc123';
+      const mockStackId = 'arn:aws:cloudformation:us-west-2:123456789012:stack/test-stack/abc123';
 
       mockSend.mockResolvedValue({
         Stacks: [
@@ -234,7 +234,7 @@ describe('stack-manager', () => {
     });
 
     it('should handle CREATE_IN_PROGRESS status', async () => {
-      const mockStackId = 'arn:aws:cloudformation:eu-west-2:123456789012:stack/test-stack/abc123';
+      const mockStackId = 'arn:aws:cloudformation:us-west-2:123456789012:stack/test-stack/abc123';
 
       mockSend.mockResolvedValue({
         Stacks: [
@@ -252,7 +252,7 @@ describe('stack-manager', () => {
     });
 
     it('should handle UPDATE_ROLLBACK_COMPLETE status', async () => {
-      const mockStackId = 'arn:aws:cloudformation:eu-west-2:123456789012:stack/test-stack/abc123';
+      const mockStackId = 'arn:aws:cloudformation:us-west-2:123456789012:stack/test-stack/abc123';
 
       mockSend.mockResolvedValue({
         Stacks: [
@@ -301,7 +301,7 @@ describe('stack-manager', () => {
       mockSend.mockRejectedValue(error);
 
       // Mock deployStack success
-      const mockStackId = 'arn:aws:cloudformation:eu-west-2:123456789012:stack/test-stack/abc123';
+      const mockStackId = 'arn:aws:cloudformation:us-west-2:123456789012:stack/test-stack/abc123';
       mockDeployStack.mockResolvedValue({
         stackId: mockStackId,
       });
@@ -326,7 +326,7 @@ describe('stack-manager', () => {
     });
 
     it('should return existing stack ID for CREATE_COMPLETE status', async () => {
-      const mockStackId = 'arn:aws:cloudformation:eu-west-2:123456789012:stack/test-stack/abc123';
+      const mockStackId = 'arn:aws:cloudformation:us-west-2:123456789012:stack/test-stack/abc123';
 
       mockSend.mockResolvedValue({
         Stacks: [
@@ -358,7 +358,7 @@ describe('stack-manager', () => {
     });
 
     it('should return existing stack ID for UPDATE_COMPLETE status', async () => {
-      const mockStackId = 'arn:aws:cloudformation:eu-west-2:123456789012:stack/test-stack/abc123';
+      const mockStackId = 'arn:aws:cloudformation:us-west-2:123456789012:stack/test-stack/abc123';
 
       mockSend.mockResolvedValue({
         Stacks: [
@@ -387,7 +387,7 @@ describe('stack-manager', () => {
     });
 
     it('should skip deployment for CREATE_IN_PROGRESS status', async () => {
-      const mockStackId = 'arn:aws:cloudformation:eu-west-2:123456789012:stack/test-stack/abc123';
+      const mockStackId = 'arn:aws:cloudformation:us-west-2:123456789012:stack/test-stack/abc123';
 
       mockSend.mockResolvedValue({
         Stacks: [
@@ -419,7 +419,7 @@ describe('stack-manager', () => {
     });
 
     it('should skip deployment for UPDATE_IN_PROGRESS status', async () => {
-      const mockStackId = 'arn:aws:cloudformation:eu-west-2:123456789012:stack/test-stack/abc123';
+      const mockStackId = 'arn:aws:cloudformation:us-west-2:123456789012:stack/test-stack/abc123';
 
       mockSend.mockResolvedValue({
         Stacks: [
@@ -448,7 +448,7 @@ describe('stack-manager', () => {
     });
 
     it('should skip deployment for DELETE_IN_PROGRESS status', async () => {
-      const mockStackId = 'arn:aws:cloudformation:eu-west-2:123456789012:stack/test-stack/abc123';
+      const mockStackId = 'arn:aws:cloudformation:us-west-2:123456789012:stack/test-stack/abc123';
 
       mockSend.mockResolvedValue({
         Stacks: [
@@ -473,9 +473,9 @@ describe('stack-manager', () => {
     });
 
     it('should delete and recreate stack for ROLLBACK_COMPLETE status', async () => {
-      const mockStackId = 'arn:aws:cloudformation:eu-west-2:123456789012:stack/test-stack/abc123';
+      const mockStackId = 'arn:aws:cloudformation:us-west-2:123456789012:stack/test-stack/abc123';
       const newStackId =
-        'arn:aws:cloudformation:eu-west-2:123456789012:stack/test-stack/def456';
+        'arn:aws:cloudformation:us-west-2:123456789012:stack/test-stack/def456';
 
       // First call: describe stack (ROLLBACK_COMPLETE)
       // Second call: delete stack
@@ -518,7 +518,7 @@ describe('stack-manager', () => {
     });
 
     it('should handle UPDATE_ROLLBACK_COMPLETE status as updatable', async () => {
-      const mockStackId = 'arn:aws:cloudformation:eu-west-2:123456789012:stack/test-stack/abc123';
+      const mockStackId = 'arn:aws:cloudformation:us-west-2:123456789012:stack/test-stack/abc123';
 
       mockSend.mockResolvedValue({
         Stacks: [
@@ -550,9 +550,9 @@ describe('stack-manager', () => {
     });
 
     it('should create new stack for DELETE_COMPLETE status', async () => {
-      const mockStackId = 'arn:aws:cloudformation:eu-west-2:123456789012:stack/test-stack/abc123';
+      const mockStackId = 'arn:aws:cloudformation:us-west-2:123456789012:stack/test-stack/abc123';
       const newStackId =
-        'arn:aws:cloudformation:eu-west-2:123456789012:stack/test-stack/new789';
+        'arn:aws:cloudformation:us-west-2:123456789012:stack/test-stack/new789';
 
       mockSend.mockResolvedValue({
         Stacks: [
@@ -588,7 +588,7 @@ describe('stack-manager', () => {
     });
 
     it('should handle CREATE_FAILED status with warning', async () => {
-      const mockStackId = 'arn:aws:cloudformation:eu-west-2:123456789012:stack/test-stack/abc123';
+      const mockStackId = 'arn:aws:cloudformation:us-west-2:123456789012:stack/test-stack/abc123';
 
       mockSend.mockResolvedValue({
         Stacks: [
@@ -644,7 +644,7 @@ describe('stack-manager', () => {
     });
 
     it('should throw StackManagementError when delete fails for ROLLBACK_COMPLETE', async () => {
-      const mockStackId = 'arn:aws:cloudformation:eu-west-2:123456789012:stack/test-stack/abc123';
+      const mockStackId = 'arn:aws:cloudformation:us-west-2:123456789012:stack/test-stack/abc123';
 
       mockSend
         .mockResolvedValueOnce({
@@ -674,7 +674,7 @@ describe('stack-manager', () => {
     });
 
     it('should skip deployment for ROLLBACK_IN_PROGRESS status', async () => {
-      const mockStackId = 'arn:aws:cloudformation:eu-west-2:123456789012:stack/test-stack/abc123';
+      const mockStackId = 'arn:aws:cloudformation:us-west-2:123456789012:stack/test-stack/abc123';
 
       mockSend.mockResolvedValue({
         Stacks: [
@@ -699,7 +699,7 @@ describe('stack-manager', () => {
     });
 
     it('should skip deployment for UPDATE_ROLLBACK_IN_PROGRESS status', async () => {
-      const mockStackId = 'arn:aws:cloudformation:eu-west-2:123456789012:stack/test-stack/abc123';
+      const mockStackId = 'arn:aws:cloudformation:us-west-2:123456789012:stack/test-stack/abc123';
 
       mockSend.mockResolvedValue({
         Stacks: [
@@ -727,7 +727,7 @@ describe('stack-manager', () => {
       error.name = 'ValidationError';
       mockSend.mockRejectedValue(error);
 
-      const mockStackId = 'arn:aws:cloudformation:eu-west-2:123456789012:stack/test-stack/abc123';
+      const mockStackId = 'arn:aws:cloudformation:us-west-2:123456789012:stack/test-stack/abc123';
       mockDeployStack.mockResolvedValue({
         stackId: mockStackId,
       });
@@ -748,7 +748,7 @@ describe('stack-manager', () => {
     });
 
     it('should handle IMPORT_IN_PROGRESS status', async () => {
-      const mockStackId = 'arn:aws:cloudformation:eu-west-2:123456789012:stack/test-stack/abc123';
+      const mockStackId = 'arn:aws:cloudformation:us-west-2:123456789012:stack/test-stack/abc123';
 
       mockSend.mockResolvedValue({
         Stacks: [
@@ -773,7 +773,7 @@ describe('stack-manager', () => {
     });
 
     it('should handle REVIEW_IN_PROGRESS status', async () => {
-      const mockStackId = 'arn:aws:cloudformation:eu-west-2:123456789012:stack/test-stack/abc123';
+      const mockStackId = 'arn:aws:cloudformation:us-west-2:123456789012:stack/test-stack/abc123';
 
       mockSend.mockResolvedValue({
         Stacks: [
@@ -797,7 +797,7 @@ describe('stack-manager', () => {
     });
 
     it('should use correct credentials for delete operation', async () => {
-      const mockStackId = 'arn:aws:cloudformation:eu-west-2:123456789012:stack/test-stack/abc123';
+      const mockStackId = 'arn:aws:cloudformation:us-west-2:123456789012:stack/test-stack/abc123';
 
       mockSend
         .mockResolvedValueOnce({

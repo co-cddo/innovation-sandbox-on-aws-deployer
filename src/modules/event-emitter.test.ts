@@ -198,7 +198,7 @@ describe('event-emitter module', () => {
       expect(EventBridgeClient).toHaveBeenCalledWith({ region: 'us-west-2' });
     });
 
-    it('should use default AWS region (eu-west-2) when not specified', async () => {
+    it('should use default AWS region (us-west-2) when not specified', async () => {
       delete process.env.AWS_REGION;
       resetConfig();
       resetEventBridgeClient();
@@ -211,7 +211,7 @@ describe('event-emitter module', () => {
       await emitEvent('Test Event', { test: 'data' });
 
       // Verify EventBridgeClient was created with default region
-      expect(EventBridgeClient).toHaveBeenCalledWith({ region: 'eu-west-2' });
+      expect(EventBridgeClient).toHaveBeenCalledWith({ region: 'us-west-2' });
     });
   });
 
@@ -280,10 +280,10 @@ describe('event-emitter module', () => {
         Entries: [{ EventId: 'event-123' }],
       });
 
-      // Create client with default region (eu-west-2)
+      // Create client with default region (us-west-2)
       await emitEvent('Event 1', { data: 1 });
       expect(EventBridgeClient).toHaveBeenCalledTimes(1);
-      expect(EventBridgeClient).toHaveBeenLastCalledWith({ region: 'eu-west-2' });
+      expect(EventBridgeClient).toHaveBeenLastCalledWith({ region: 'us-west-2' });
 
       // Reset both config and client
       resetConfig();

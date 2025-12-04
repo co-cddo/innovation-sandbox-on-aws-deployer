@@ -78,7 +78,7 @@ describe('github-url module', () => {
           githubPath: 'infrastructure',
           leaseTableName: 'lease-table',
           targetRoleName: 'Role',
-          awsRegion: 'eu-west-2',
+          awsRegion: 'us-west-2',
           eventSource: 'source',
           logLevel: 'INFO',
         };
@@ -97,7 +97,7 @@ describe('github-url module', () => {
           githubPath: 'templates',
           leaseTableName: 'table',
           targetRoleName: 'Role',
-          awsRegion: 'eu-west-2',
+          awsRegion: 'us-west-2',
           eventSource: 'source',
           logLevel: 'INFO',
         };
@@ -167,7 +167,7 @@ describe('github-url module', () => {
           githubPath: 'cfn',
           leaseTableName: 'table',
           targetRoleName: 'Role',
-          awsRegion: 'eu-west-2',
+          awsRegion: 'us-west-2',
           eventSource: 'source',
           logLevel: 'INFO',
         };
@@ -186,7 +186,7 @@ describe('github-url module', () => {
           githubPath: 'templates',
           leaseTableName: 'table',
           targetRoleName: 'Role',
-          awsRegion: 'eu-west-2',
+          awsRegion: 'us-west-2',
           eventSource: 'source',
           logLevel: 'INFO',
         };
@@ -203,7 +203,7 @@ describe('github-url module', () => {
           githubPath: 'infrastructure/cloudformation/templates',
           leaseTableName: 'table',
           targetRoleName: 'Role',
-          awsRegion: 'eu-west-2',
+          awsRegion: 'us-west-2',
           eventSource: 'source',
           logLevel: 'INFO',
         };
@@ -222,7 +222,7 @@ describe('github-url module', () => {
           githubPath: 'templates',
           leaseTableName: 'table',
           targetRoleName: 'Role',
-          awsRegion: 'eu-west-2',
+          awsRegion: 'us-west-2',
           eventSource: 'source',
           logLevel: 'INFO',
         };
@@ -302,7 +302,7 @@ describe('github-url module', () => {
           githubPath: 'path',
           leaseTableName: 'table',
           targetRoleName: 'Role',
-          awsRegion: 'eu-west-2',
+          awsRegion: 'us-west-2',
           eventSource: 'source',
           logLevel: 'INFO',
         };

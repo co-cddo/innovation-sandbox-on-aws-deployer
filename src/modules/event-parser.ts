@@ -34,7 +34,7 @@ function isObject(value: unknown): value is Record<string, unknown> {
  *   source: 'innovation-sandbox',
  *   account: '123456789012',
  *   time: '2024-01-01T00:00:00Z',
- *   region: 'eu-west-2',
+ *   region: 'us-west-2',
  *   detail: {
  *     leaseId: 'lease-abc-123',
  *     accountId: '987654321098',

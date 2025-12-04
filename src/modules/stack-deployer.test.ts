@@ -54,7 +54,7 @@ describe('stack-deployer', () => {
 
   describe('deployStack', () => {
     it('should successfully deploy a stack and return stack ID', async () => {
-      const mockStackId = 'arn:aws:cloudformation:eu-west-2:123456789012:stack/test-stack/abc123';
+      const mockStackId = 'arn:aws:cloudformation:us-west-2:123456789012:stack/test-stack/abc123';
 
       mockSend.mockResolvedValue({
         StackId: mockStackId,
@@ -74,7 +74,7 @@ describe('stack-deployer', () => {
     });
 
     it('should create CloudFormation client with correct credentials', async () => {
-      const mockStackId = 'arn:aws:cloudformation:eu-west-2:123456789012:stack/test-stack/abc123';
+      const mockStackId = 'arn:aws:cloudformation:us-west-2:123456789012:stack/test-stack/abc123';
 
       mockSend.mockResolvedValue({
         StackId: mockStackId,
@@ -98,7 +98,7 @@ describe('stack-deployer', () => {
     });
 
     it('should call CreateStackCommand with correct parameters', async () => {
-      const mockStackId = 'arn:aws:cloudformation:eu-west-2:123456789012:stack/test-stack/abc123';
+      const mockStackId = 'arn:aws:cloudformation:us-west-2:123456789012:stack/test-stack/abc123';
 
       mockSend.mockResolvedValue({
         StackId: mockStackId,
@@ -121,7 +121,7 @@ describe('stack-deployer', () => {
     });
 
     it('should enable CAPABILITY_NAMED_IAM for IAM resource creation', async () => {
-      const mockStackId = 'arn:aws:cloudformation:eu-west-2:123456789012:stack/test-stack/abc123';
+      const mockStackId = 'arn:aws:cloudformation:us-west-2:123456789012:stack/test-stack/abc123';
 
       mockSend.mockResolvedValue({
         StackId: mockStackId,
@@ -143,7 +143,7 @@ describe('stack-deployer', () => {
     });
 
     it('should deploy stack with parameters when provided', async () => {
-      const mockStackId = 'arn:aws:cloudformation:eu-west-2:123456789012:stack/test-stack/abc123';
+      const mockStackId = 'arn:aws:cloudformation:us-west-2:123456789012:stack/test-stack/abc123';
 
       mockSend.mockResolvedValue({
         StackId: mockStackId,
@@ -171,7 +171,7 @@ describe('stack-deployer', () => {
     });
 
     it('should deploy stack without parameters when not provided', async () => {
-      const mockStackId = 'arn:aws:cloudformation:eu-west-2:123456789012:stack/test-stack/abc123';
+      const mockStackId = 'arn:aws:cloudformation:us-west-2:123456789012:stack/test-stack/abc123';
 
       mockSend.mockResolvedValue({
         StackId: mockStackId,
@@ -193,7 +193,7 @@ describe('stack-deployer', () => {
     });
 
     it('should create a new client instance per call (no singleton)', async () => {
-      const mockStackId = 'arn:aws:cloudformation:eu-west-2:123456789012:stack/test-stack/abc123';
+      const mockStackId = 'arn:aws:cloudformation:us-west-2:123456789012:stack/test-stack/abc123';
 
       mockSend.mockResolvedValue({
         StackId: mockStackId,
@@ -385,7 +385,7 @@ describe('stack-deployer', () => {
     });
 
     it('should work with different credential sets', async () => {
-      const mockStackId = 'arn:aws:cloudformation:eu-west-2:123456789012:stack/test-stack/abc123';
+      const mockStackId = 'arn:aws:cloudformation:us-west-2:123456789012:stack/test-stack/abc123';
 
       mockSend.mockResolvedValue({
         StackId: mockStackId,
@@ -435,7 +435,7 @@ describe('stack-deployer', () => {
     });
 
     it('should handle complex templates with nested resources', async () => {
-      const mockStackId = 'arn:aws:cloudformation:eu-west-2:123456789012:stack/complex-stack/xyz789';
+      const mockStackId = 'arn:aws:cloudformation:us-west-2:123456789012:stack/complex-stack/xyz789';
 
       mockSend.mockResolvedValue({
         StackId: mockStackId,
@@ -481,7 +481,7 @@ describe('stack-deployer', () => {
     });
 
     it('should send command to CloudFormation client', async () => {
-      const mockStackId = 'arn:aws:cloudformation:eu-west-2:123456789012:stack/test-stack/abc123';
+      const mockStackId = 'arn:aws:cloudformation:us-west-2:123456789012:stack/test-stack/abc123';
 
       mockSend.mockResolvedValue({
         StackId: mockStackId,

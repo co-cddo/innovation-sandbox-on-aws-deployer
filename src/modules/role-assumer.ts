@@ -70,7 +70,7 @@ export function resetSTSClient(): void {
  * const credentials = await assumeRole('123456789012');
  * // Use credentials with other AWS SDK clients
  * const cfClient = new CloudFormationClient({
- *   region: 'eu-west-2',
+ *   region: 'us-west-2',
  *   credentials: {
  *     accessKeyId: credentials.accessKeyId,
  *     secretAccessKey: credentials.secretAccessKey,

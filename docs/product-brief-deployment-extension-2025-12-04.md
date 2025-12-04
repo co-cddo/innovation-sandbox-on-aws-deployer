@@ -333,7 +333,7 @@ Based on this brief, the following stories should be added to Sprint 2:
 
 ```bash
 # Discover DynamoDB tables
-aws dynamodb list-tables --region eu-west-2
+aws dynamodb list-tables --region us-west-2
 
 # Describe specific table
 aws dynamodb describe-table --table-name <table-name>
@@ -342,10 +342,10 @@ aws dynamodb describe-table --table-name <table-name>
 aws s3 ls
 
 # List EventBridge rules
-aws events list-rules --region eu-west-2
+aws events list-rules --region us-west-2
 
 # Check existing Lambda functions
-aws lambda list-functions --region eu-west-2 --query 'Functions[*].FunctionName'
+aws lambda list-functions --region us-west-2 --query 'Functions[*].FunctionName'
 ```
 
 ---

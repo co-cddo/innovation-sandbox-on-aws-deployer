@@ -141,7 +141,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
-          aws-region: ${{ vars.AWS_REGION || 'eu-west-2' }}
+          aws-region: ${{ vars.AWS_REGION || 'us-west-2' }}
 
       - name: Package Lambda function
         run: |

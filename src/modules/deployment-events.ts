@@ -72,7 +72,7 @@ export interface DeploymentFailureDetail {
  *   leaseId: 'lease-12345',
  *   accountId: '123456789012',
  *   stackName: 'basic-vpc-lease-12345',
- *   stackId: 'arn:aws:cloudformation:eu-west-2:123456789012:stack/basic-vpc-lease-12345/guid',
+ *   stackId: 'arn:aws:cloudformation:us-west-2:123456789012:stack/basic-vpc-lease-12345/guid',
  *   templateName: 'basic-vpc',
  *   action: 'created',
  *   timestamp: new Date().toISOString()

@@ -76,7 +76,7 @@ describe('Logger module', () => {
       const context: LoggerContext = {
         correlationId: 'lease-456',
         accountId: '123456789012',
-        region: 'eu-west-2',
+        region: 'us-west-2',
       };
 
       logger.setContext(context);
@@ -86,7 +86,7 @@ describe('Logger module', () => {
       const logEntry = JSON.parse(consoleLogSpy.mock.calls[0][0]);
       expect(logEntry.correlationId).toBe('lease-456');
       expect(logEntry.accountId).toBe('123456789012');
-      expect(logEntry.region).toBe('eu-west-2');
+      expect(logEntry.region).toBe('us-west-2');
     });
 
     it('should get current context', () => {
@@ -349,7 +349,7 @@ describe('Logger module', () => {
         username: 'admin',
         email: 'test@example.com',
         accountId: '123456789012',
-        region: 'eu-west-2',
+        region: 'us-west-2',
       });
 
       expect(consoleLogSpy).toHaveBeenCalledTimes(1);
@@ -357,7 +357,7 @@ describe('Logger module', () => {
       expect(logEntry.username).toBe('admin');
       expect(logEntry.email).toBe('test@example.com');
       expect(logEntry.accountId).toBe('123456789012');
-      expect(logEntry.region).toBe('eu-west-2');
+      expect(logEntry.region).toBe('us-west-2');
     });
 
     it('should redact sensitive data in nested objects', () => {

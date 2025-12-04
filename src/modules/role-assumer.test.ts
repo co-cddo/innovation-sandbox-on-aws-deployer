@@ -21,7 +21,7 @@ vi.mock('./config.js', async () => {
     ...actual,
     getConfig: vi.fn(() => ({
       targetRoleName: 'InnovationSandbox-ndx-DeployerRole',
-      awsRegion: 'eu-west-2',
+      awsRegion: 'us-west-2',
       githubRepo: 'co-cddo/ndx_try_aws_scenarios',
       githubBranch: 'main',
       githubPath: 'cloudformation/scenarios',

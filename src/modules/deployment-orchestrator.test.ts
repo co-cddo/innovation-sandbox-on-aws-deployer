@@ -68,7 +68,7 @@ describe('deployment-orchestrator', () => {
 
       vi.mocked(mapParameters).mockReturnValue(mappedParams);
       vi.mocked(deployOrUpdateStack).mockResolvedValue({
-        stackId: 'arn:aws:cloudformation:eu-west-2:123456789012:stack/test-stack/guid',
+        stackId: 'arn:aws:cloudformation:us-west-2:123456789012:stack/test-stack/guid',
         action: 'created',
         status: StackStatus.CREATE_IN_PROGRESS,
       });
@@ -84,7 +84,7 @@ describe('deployment-orchestrator', () => {
       const result = await deployWithParameters(input, mockLogger);
 
       expect(result).toEqual({
-        stackId: 'arn:aws:cloudformation:eu-west-2:123456789012:stack/test-stack/guid',
+        stackId: 'arn:aws:cloudformation:us-west-2:123456789012:stack/test-stack/guid',
         action: 'created',
         parametersUsed: 3,
         parametersSkipped: 0,
@@ -103,7 +103,7 @@ describe('deployment-orchestrator', () => {
     it('should handle template with no parameters gracefully', async () => {
       vi.mocked(mapParameters).mockReturnValue([]);
       vi.mocked(deployOrUpdateStack).mockResolvedValue({
-        stackId: 'arn:aws:cloudformation:eu-west-2:123456789012:stack/test-stack/guid',
+        stackId: 'arn:aws:cloudformation:us-west-2:123456789012:stack/test-stack/guid',
         action: 'created',
         status: StackStatus.CREATE_IN_PROGRESS,
       });
@@ -119,7 +119,7 @@ describe('deployment-orchestrator', () => {
       const result = await deployWithParameters(input, mockLogger);
 
       expect(result).toEqual({
-        stackId: 'arn:aws:cloudformation:eu-west-2:123456789012:stack/test-stack/guid',
+        stackId: 'arn:aws:cloudformation:us-west-2:123456789012:stack/test-stack/guid',
         action: 'created',
         parametersUsed: 0,
         parametersSkipped: 0,
@@ -146,7 +146,7 @@ describe('deployment-orchestrator', () => {
 
       vi.mocked(mapParameters).mockReturnValue(mappedParams);
       vi.mocked(deployOrUpdateStack).mockResolvedValue({
-        stackId: 'arn:aws:cloudformation:eu-west-2:123456789012:stack/test-stack/guid',
+        stackId: 'arn:aws:cloudformation:us-west-2:123456789012:stack/test-stack/guid',
         action: 'created',
         status: StackStatus.CREATE_IN_PROGRESS,
       });
@@ -162,7 +162,7 @@ describe('deployment-orchestrator', () => {
       const result = await deployWithParameters(input, mockLogger);
 
       expect(result).toEqual({
-        stackId: 'arn:aws:cloudformation:eu-west-2:123456789012:stack/test-stack/guid',
+        stackId: 'arn:aws:cloudformation:us-west-2:123456789012:stack/test-stack/guid',
         action: 'created',
         parametersUsed: 3,
         parametersSkipped: 2,
@@ -182,7 +182,7 @@ describe('deployment-orchestrator', () => {
 
       vi.mocked(mapParameters).mockReturnValue(mappedParams);
       vi.mocked(deployOrUpdateStack).mockResolvedValue({
-        stackId: 'arn:aws:cloudformation:eu-west-2:123456789012:stack/test-stack/guid',
+        stackId: 'arn:aws:cloudformation:us-west-2:123456789012:stack/test-stack/guid',
         action: 'created',
         status: StackStatus.CREATE_IN_PROGRESS,
       });
@@ -195,7 +195,7 @@ describe('deployment-orchestrator', () => {
         credentials: mockCredentials,
         customParameters: {
           Environment: 'production',
-          Region: 'eu-west-2',
+          Region: 'us-west-2',
         },
       };
 
@@ -221,7 +221,7 @@ describe('deployment-orchestrator', () => {
 
       vi.mocked(mapParameters).mockReturnValue(mappedParams);
       vi.mocked(deployOrUpdateStack).mockResolvedValue({
-        stackId: 'arn:aws:cloudformation:eu-west-2:123456789012:stack/test-stack/guid',
+        stackId: 'arn:aws:cloudformation:us-west-2:123456789012:stack/test-stack/guid',
         action: 'created',
         status: StackStatus.CREATE_IN_PROGRESS,
       });
@@ -256,7 +256,7 @@ describe('deployment-orchestrator', () => {
 
       vi.mocked(mapParameters).mockReturnValue(mappedParams);
       vi.mocked(deployOrUpdateStack).mockResolvedValue({
-        stackId: 'arn:aws:cloudformation:eu-west-2:123456789012:stack/test-stack/guid',
+        stackId: 'arn:aws:cloudformation:us-west-2:123456789012:stack/test-stack/guid',
         action: 'created',
         status: StackStatus.CREATE_IN_PROGRESS,
       });
@@ -294,7 +294,7 @@ describe('deployment-orchestrator', () => {
 
       vi.mocked(mapParameters).mockReturnValue(mappedParams);
       vi.mocked(deployOrUpdateStack).mockResolvedValue({
-        stackId: 'arn:aws:cloudformation:eu-west-2:123456789012:stack/test-stack/guid',
+        stackId: 'arn:aws:cloudformation:us-west-2:123456789012:stack/test-stack/guid',
         action: 'exists',
         status: StackStatus.CREATE_COMPLETE,
       });
@@ -327,7 +327,7 @@ describe('deployment-orchestrator', () => {
 
       vi.mocked(mapParameters).mockReturnValue(mappedParams);
       vi.mocked(deployOrUpdateStack).mockResolvedValue({
-        stackId: 'arn:aws:cloudformation:eu-west-2:123456789012:stack/test-stack/guid',
+        stackId: 'arn:aws:cloudformation:us-west-2:123456789012:stack/test-stack/guid',
         action: 'skipped',
         status: StackStatus.CREATE_IN_PROGRESS,
       });
@@ -423,7 +423,7 @@ describe('deployment-orchestrator', () => {
 
       vi.mocked(mapParameters).mockReturnValue(mappedParams);
       vi.mocked(deployOrUpdateStack).mockResolvedValue({
-        stackId: 'arn:aws:cloudformation:eu-west-2:123456789012:stack/test-stack/guid',
+        stackId: 'arn:aws:cloudformation:us-west-2:123456789012:stack/test-stack/guid',
         action: 'created',
         status: StackStatus.CREATE_IN_PROGRESS,
       });
@@ -461,7 +461,7 @@ describe('deployment-orchestrator', () => {
 
       vi.mocked(mapParameters).mockReturnValue(mappedParams);
       vi.mocked(deployOrUpdateStack).mockResolvedValue({
-        stackId: 'arn:aws:cloudformation:eu-west-2:123456789012:stack/test-stack/guid',
+        stackId: 'arn:aws:cloudformation:us-west-2:123456789012:stack/test-stack/guid',
         action: 'created',
         status: StackStatus.CREATE_IN_PROGRESS,
       });
@@ -491,7 +491,7 @@ describe('deployment-orchestrator', () => {
 
       vi.mocked(mapParameters).mockReturnValue(mappedParams);
       vi.mocked(deployOrUpdateStack).mockResolvedValue({
-        stackId: 'arn:aws:cloudformation:eu-west-2:123456789012:stack/test-stack/guid',
+        stackId: 'arn:aws:cloudformation:us-west-2:123456789012:stack/test-stack/guid',
         action: 'created',
         status: StackStatus.CREATE_IN_PROGRESS,
       });
@@ -594,7 +594,7 @@ describe('deployment-orchestrator', () => {
 
       vi.mocked(mapParameters).mockReturnValue(mappedParams);
       vi.mocked(deployOrUpdateStack).mockResolvedValue({
-        stackId: 'arn:aws:cloudformation:eu-west-2:123456789012:stack/test-stack/guid',
+        stackId: 'arn:aws:cloudformation:us-west-2:123456789012:stack/test-stack/guid',
         action: 'created',
         status: StackStatus.CREATE_IN_PROGRESS,
       });

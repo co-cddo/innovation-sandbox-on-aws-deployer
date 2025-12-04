@@ -111,7 +111,7 @@ The Lambda function is configured via the following environment variables:
 | `GITHUB_BRANCH` | No | `main` | GitHub branch to fetch templates from. |
 | `GITHUB_PATH` | No | `cloudformation/scenarios` | Path within repository to scenario templates directory. |
 | `TARGET_ROLE_NAME` | No | `ndx_IsbUsersPS` | IAM role name to assume in target sub-accounts for CloudFormation operations. |
-| `AWS_REGION` | No | `eu-west-2` | AWS region for Lambda execution and DynamoDB access. |
+| `AWS_REGION` | No | `us-west-2` | AWS region for Lambda execution and DynamoDB access. |
 | `EVENT_SOURCE` | No | `isb-deployer` | EventBridge source identifier for emitted deployment status events. |
 | `LOG_LEVEL` | No | `INFO` | Logging verbosity level. Options: `DEBUG`, `INFO`, `WARN`, `ERROR`. |
 
@@ -185,7 +185,7 @@ Create a test event file `test-event.json`:
   "source": "innovation-sandbox",
   "account": "123456789012",
   "time": "2025-12-03T10:00:00Z",
-  "region": "eu-west-2",
+  "region": "us-west-2",
   "detail": {
     "leaseId": "lease-001",
     "accountId": "987654321098",
@@ -203,7 +203,7 @@ export GITHUB_REPO=co-cddo/ndx_try_aws_scenarios
 export GITHUB_BRANCH=main
 export GITHUB_PATH=cloudformation/scenarios
 export TARGET_ROLE_NAME=ndx_IsbUsersPS
-export AWS_REGION=eu-west-2
+export AWS_REGION=us-west-2
 export LOG_LEVEL=DEBUG
 
 # Test with AWS SAM CLI (if installed)
@@ -269,7 +269,7 @@ aws cloudformation deploy \
     TargetRoleName=ndx_IsbUsersPS \
     EventSource=innovation-sandbox \
   --capabilities CAPABILITY_NAMED_IAM \
-  --region eu-west-2
+  --region us-west-2
 ```
 
 #### Using Parameter Files
@@ -288,7 +288,7 @@ aws cloudformation deploy \
   --stack-name isb-deployer-dev \
   --parameter-overrides file://infrastructure/parameters/dev.json \
   --capabilities CAPABILITY_NAMED_IAM \
-  --region eu-west-2
+  --region us-west-2
 ```
 
 ### Automated Deployment via CI/CD
@@ -306,7 +306,7 @@ The project includes a GitHub Actions workflow (`.github/workflows/ci.yml`) that
 **Required GitHub Variables:**
 
 - `LEASE_TABLE_NAME`: DynamoDB table name
-- `AWS_REGION`: AWS region (default: `eu-west-2`)
+- `AWS_REGION`: AWS region (default: `us-west-2`)
 - `TARGET_ROLE_NAME`: IAM role in target accounts (optional)
 - `GITHUB_REPO`: Template repository (optional)
 - `GITHUB_BRANCH`: Template branch (optional)
@@ -401,7 +401,7 @@ The Lambda function expects EventBridge events with the following structure:
   "source": "innovation-sandbox",
   "account": "123456789012",
   "time": "2025-12-03T10:00:00Z",
-  "region": "eu-west-2",
+  "region": "us-west-2",
   "detail": {
     "leaseId": "lease-001",
     "accountId": "987654321098",
@@ -431,7 +431,7 @@ The Lambda function emits deployment status events back to EventBridge:
     "accountId": "987654321098",
     "templateName": "ec2-instance",
     "stackName": "isb-lease-001-ec2-instance",
-    "stackId": "arn:aws:cloudformation:eu-west-2:987654321098:stack/..."
+    "stackId": "arn:aws:cloudformation:us-west-2:987654321098:stack/..."
   }
 }
 ```
@@ -577,7 +577,7 @@ aws events list-rules --name-prefix isb-deployer
 # Describe CloudFormation stack in target account (requires assumed role)
 aws cloudformation describe-stacks \
   --stack-name isb-lease-001-ec2-instance \
-  --region eu-west-2 \
+  --region us-west-2 \
   --profile target-account
 ```
 
