@@ -136,8 +136,10 @@ Resources:
               StringEquals:
                 'token.actions.githubusercontent.com:aud': 'sts.amazonaws.com'
               StringLike:
-                # Restrict to specific repo and branch
-                'token.actions.githubusercontent.com:sub': !Sub 'repo:${GitHubOrg}/${GitHubRepo}:ref:refs/heads/${GitHubBranch}'
+                # Allow both branch pushes and environment deployments
+                'token.actions.githubusercontent.com:sub':
+                  - !Sub 'repo:${GitHubOrg}/${GitHubRepo}:ref:refs/heads/${GitHubBranch}'
+                  - !Sub 'repo:${GitHubOrg}/${GitHubRepo}:environment:*'
       Policies:
         # CloudFormation permissions for stack deployment
         - PolicyName: CloudFormationDeployment
