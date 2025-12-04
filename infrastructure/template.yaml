@@ -31,6 +31,7 @@ Metadata:
           default: 'Event Configuration'
         Parameters:
           - EventSource
+          - EventBusName
       - Label:
           default: 'Deployment Artifacts'
         Parameters:
@@ -55,6 +56,8 @@ Metadata:
         default: 'Target IAM Role Name'
       EventSource:
         default: 'EventBridge Source Filter'
+      EventBusName:
+        default: 'EventBridge Event Bus Name'
       ArtifactBucket:
         default: 'S3 Artifact Bucket'
       ArtifactKey:
@@ -158,6 +161,13 @@ Parameters:
     AllowedPattern: '[a-zA-Z0-9_./+-]+'
     ConstraintDescription: 'Must be a valid S3 object key (alphanumeric, dots, slashes, dashes, underscores, plus signs)'
 
+  EventBusName:
+    Type: String
+    Description: 'EventBridge event bus name to subscribe to for lease events. Use "default" for the default bus or specify a custom bus name/ARN.'
+    Default: 'default'
+    MinLength: 1
+    MaxLength: 256
+
 Conditions:
   IsProd: !Equals [!Ref Environment, 'prod']
   IsNotProd: !Not [!Condition IsProd]
@@ -234,7 +244,7 @@ Resources:
           GITHUB_BRANCH: !Ref GithubBranch
           GITHUB_PATH: !Ref GithubPath
           TARGET_ROLE_NAME: !Ref TargetRoleName
-          EVENT_SOURCE: 'isb-deployer'
+          EVENT_SOURCE: !Ref EventSource
           LOG_LEVEL: !If [IsProd, 'INFO', 'DEBUG']
       Tags:
         - Key: Application
@@ -276,19 +286,30 @@ Resources:
                   - 'dynamodb:Query'
                 Resource: !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${LeaseTableName}'
 
-        # STS permissions for cross-account role assumption
-        # Allows assuming the target role in sub-accounts for CloudFormation deployment
-        - PolicyName: STSAssumeRoleAccess
+        # KMS decrypt permission for encrypted DynamoDB table
+        - PolicyName: KMSDecryptAccess
           PolicyDocument:
             Version: '2012-10-17'
             Statement:
               - Effect: Allow
                 Action:
+                  - 'kms:Decrypt'
+                Resource: !Sub 'arn:aws:kms:${AWS::Region}:${AWS::AccountId}:key/*'
+                Condition:
+                  StringEquals:
+                    'kms:ViaService': !Sub 'dynamodb.${AWS::Region}.amazonaws.com'
+
+        # STS permissions for ISB double role chain
+        # ISB requires: Lambda -> IntermediateRole (hub) -> SandboxAccountRole (target)
+        - PolicyName: STSAssumeRoleAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              # Allow assuming IntermediateRole in hub account (first hop)
+              - Effect: Allow
+                Action:
                   - 'sts:AssumeRole'
-                Resource: !Sub 'arn:aws:iam::*:role/${TargetRoleName}'
-                # Note: Wildcard (*) allows assuming role in any account
-                # This is necessary for multi-account sandbox architecture
-                # Consider adding aws:PrincipalOrgID condition for additional security
+                Resource: !Sub 'arn:aws:iam::${AWS::AccountId}:role/InnovationSandbox-ndx-IntermediateRole'
 
         # EventBridge permissions for deployment status events
         - PolicyName: EventBridgePutEvents
@@ -314,7 +335,7 @@ Resources:
     Properties:
       Name: !Sub 'isb-deployer-lease-approved-${Environment}'
       Description: 'Triggers deployment when a lease is approved'
-      EventBusName: default
+      EventBusName: !Ref EventBusName
       State: ENABLED
       EventPattern:
         source:

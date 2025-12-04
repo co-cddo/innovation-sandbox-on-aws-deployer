@@ -1,4 +1,4 @@
-import { STSClient, AssumeRoleCommand } from '@aws-sdk/client-sts';
+import { STSClient, AssumeRoleCommand, GetCallerIdentityCommand } from '@aws-sdk/client-sts';
 import { getConfig } from './config.js';
 
 /**
@@ -53,76 +53,104 @@ export function resetSTSClient(): void {
 }
 
 /**
- * Assumes an IAM role in the target AWS account using STS AssumeRole
+ * ISB role names for the double role assumption chain
+ * The deployer must:
+ * 1. Assume IntermediateRole in the hub account
+ * 2. Use those creds to assume SandboxAccountRole in the target account
+ */
+const ISB_INTERMEDIATE_ROLE = 'InnovationSandbox-ndx-IntermediateRole';
+const ISB_SANDBOX_ROLE = 'InnovationSandbox-ndx-SandboxAccountRole';
+const HUB_ACCOUNT_ID = '568672915267';
+
+/**
+ * Performs STS AssumeRole with given credentials
+ */
+async function doAssumeRole(
+  roleArn: string,
+  sessionName: string,
+  credentials?: AssumedRoleCredentials
+): Promise<AssumedRoleCredentials> {
+  const config = getConfig();
+
+  // Create STS client with optional credentials for role chaining
+  const clientConfig: { region: string; credentials?: object } = { region: config.awsRegion };
+  if (credentials) {
+    clientConfig.credentials = {
+      accessKeyId: credentials.accessKeyId,
+      secretAccessKey: credentials.secretAccessKey,
+      sessionToken: credentials.sessionToken,
+    };
+  }
+  const client = new STSClient(clientConfig);
+
+  const command = new AssumeRoleCommand({
+    RoleArn: roleArn,
+    RoleSessionName: sessionName,
+    DurationSeconds: 3600,
+  });
+
+  const response = await client.send(command);
+
+  if (!response.Credentials) {
+    throw new RoleAssumptionError(
+      `STS AssumeRole succeeded but did not return credentials for role ${roleArn}`
+    );
+  }
+
+  const { AccessKeyId, SecretAccessKey, SessionToken, Expiration } = response.Credentials;
+
+  if (!AccessKeyId || !SecretAccessKey || !SessionToken) {
+    throw new RoleAssumptionError(
+      `STS AssumeRole returned incomplete credentials for role ${roleArn}`
+    );
+  }
+
+  return {
+    accessKeyId: AccessKeyId,
+    secretAccessKey: SecretAccessKey,
+    sessionToken: SessionToken,
+    expiration: Expiration,
+  };
+}
+
+/**
+ * Assumes an IAM role in the target sandbox account using ISB's role chain
  *
- * This function:
- * - Constructs the role ARN from the account ID and configured role name
- * - Calls AWS STS AssumeRole with appropriate session parameters
- * - Returns temporary credentials for cross-account access
- * - Sets a session name for CloudTrail audit trail
+ * ISB uses a double role assumption pattern:
+ * 1. First assume IntermediateRole in the hub account (568672915267)
+ * 2. Then use those creds to assume SandboxAccountRole in the target account
  *
- * @param accountId - The AWS account ID where the role exists
- * @returns Temporary credentials for the assumed role
- * @throws {RoleAssumptionError} If role assumption fails or credentials are missing
+ * This works with ISB's SCP configuration which only allows InnovationSandbox-*
+ * roles to operate in sandbox accounts.
+ *
+ * @param accountId - The AWS account ID where the sandbox role exists
+ * @returns Temporary credentials for the sandbox account role
+ * @throws {RoleAssumptionError} If role assumption fails
  *
  * @example
  * ```typescript
- * const credentials = await assumeRole('123456789012');
+ * const credentials = await assumeRole('831494785845');
  * // Use credentials with other AWS SDK clients
- * const cfClient = new CloudFormationClient({
- *   region: 'us-west-2',
- *   credentials: {
- *     accessKeyId: credentials.accessKeyId,
- *     secretAccessKey: credentials.secretAccessKey,
- *     sessionToken: credentials.sessionToken,
- *   }
- * });
  * ```
  */
 export async function assumeRole(accountId: string): Promise<AssumedRoleCredentials> {
-  const config = getConfig();
-  const client = getSTSClient();
-
-  // Construct the role ARN: arn:aws:iam::{accountId}:role/{roleName}
-  const roleArn = `arn:aws:iam::${accountId}:role/${config.targetRoleName}`;
-
-  // Session name for audit trail in CloudTrail
-  const roleSessionName = 'innovation-sandbox-deployer';
-
-  // Session duration: 1 hour (3600 seconds)
-  const durationSeconds = 3600;
-
   try {
-    const command = new AssumeRoleCommand({
-      RoleArn: roleArn,
-      RoleSessionName: roleSessionName,
-      DurationSeconds: durationSeconds,
-    });
+    // Step 1: Assume IntermediateRole in hub account
+    const intermediateRoleArn = `arn:aws:iam::${HUB_ACCOUNT_ID}:role/${ISB_INTERMEDIATE_ROLE}`;
+    const intermediateCreds = await doAssumeRole(
+      intermediateRoleArn,
+      'isb-deployer-intermediate'
+    );
 
-    const response = await client.send(command);
+    // Step 2: Use intermediate creds to assume SandboxAccountRole in target account
+    const sandboxRoleArn = `arn:aws:iam::${accountId}:role/${ISB_SANDBOX_ROLE}`;
+    const sandboxCreds = await doAssumeRole(
+      sandboxRoleArn,
+      'isb-deployer-sandbox',
+      intermediateCreds
+    );
 
-    // Validate that credentials were returned
-    if (!response.Credentials) {
-      throw new RoleAssumptionError(
-        `STS AssumeRole succeeded but did not return credentials for role ${roleArn}`
-      );
-    }
-
-    const { AccessKeyId, SecretAccessKey, SessionToken, Expiration } = response.Credentials;
-
-    // Validate required credential fields are present
-    if (!AccessKeyId || !SecretAccessKey || !SessionToken) {
-      throw new RoleAssumptionError(
-        `STS AssumeRole returned incomplete credentials for role ${roleArn}`
-      );
-    }
-
-    return {
-      accessKeyId: AccessKeyId,
-      secretAccessKey: SecretAccessKey,
-      sessionToken: SessionToken,
-      expiration: Expiration,
-    };
+    return sandboxCreds;
   } catch (error) {
     // If already a RoleAssumptionError, rethrow
     if (error instanceof RoleAssumptionError) {
@@ -136,7 +164,7 @@ export async function assumeRole(accountId: string): Promise<AssumedRoleCredenti
 
     // Provide descriptive error message
     throw new RoleAssumptionError(
-      `Failed to assume role ${roleArn}: ${errorName} - ${errorMessage}`,
+      `Failed to assume role chain for account ${accountId}: ${errorName} - ${errorMessage}`,
       error
     );
   }

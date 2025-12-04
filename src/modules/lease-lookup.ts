@@ -18,22 +18,23 @@ export class LeaseLookupError extends Error {
 
 /**
  * Lease details returned from DynamoDB lookup
+ * Field names are normalized from ISB's DynamoDB schema to our internal format
  */
 export interface LeaseDetails {
-  /** Unique identifier for the lease */
+  /** Unique identifier for the lease (uuid in ISB) */
   leaseId: string;
-  /** AWS account ID where the lease is deployed */
+  /** AWS account ID where the lease is deployed (awsAccountId in ISB) */
   accountId: string;
-  /** CloudFormation template name to deploy */
+  /** CloudFormation template name to deploy (originalLeaseTemplateName in ISB) */
   templateName?: string;
-  /** Budget amount in GBP for the lease */
+  /** Maximum spend budget in GBP (maxSpend in ISB) */
   budgetAmount?: number;
-  /** Status of the lease (e.g., 'active', 'expired', 'pending') */
+  /** Status of the lease (e.g., 'Active', 'Expired', 'Frozen') */
   status?: string;
   /** Expiration date of the lease in ISO 8601 format */
   expirationDate?: string;
-  /** Email address of the requester */
-  requesterEmail?: string;
+  /** Email address of the user who owns the lease */
+  userEmail: string;
   /** Any additional attributes from DynamoDB */
   [key: string]: unknown;
 }
@@ -62,34 +63,39 @@ export function resetDynamoDBClient(): void {
 }
 
 /**
- * Looks up a lease in the DynamoDB table using the lease ID
+ * Looks up a lease in the ISB DynamoDB table using userEmail and leaseId
  *
- * This function:
- * - Queries the DynamoDB leases table using the leaseId as the partition key
- * - Returns all lease attributes including accountId, templateName, budget, etc.
- * - Handles item not found scenarios with descriptive errors
- * - Handles DynamoDB service errors with appropriate error wrapping
- * - Uses configurable table name from environment (LEASE_TABLE_NAME)
+ * ISB DynamoDB schema uses a composite key:
+ * - Partition key: userEmail
+ * - Sort key: uuid (the leaseId)
  *
- * @param leaseId - The unique identifier for the lease to look up
+ * ISB field names are mapped to our internal format:
+ * - awsAccountId → accountId
+ * - originalLeaseTemplateName → templateName
+ * - maxSpend → budgetAmount
+ *
+ * @param userEmail - The email of the user who owns the lease
+ * @param leaseId - The unique identifier (uuid) for the lease
  * @returns Lease details including accountId, templateName, and other attributes
  * @throws {LeaseLookupError} If the lease is not found or DynamoDB query fails
  *
  * @example
  * ```typescript
- * const lease = await lookupLease('lease-12345');
+ * const lease = await lookupLease('user@example.gov.uk', 'f2d3eb78-907a-4c20-8127-7ce45758836d');
  * console.log(`Account: ${lease.accountId}, Template: ${lease.templateName}`);
  * ```
  */
-export async function lookupLease(leaseId: string): Promise<LeaseDetails> {
+export async function lookupLease(userEmail: string, leaseId: string): Promise<LeaseDetails> {
   const config = getConfig();
   const client = getDynamoDBClient();
 
   try {
+    // ISB table uses composite key: userEmail (HASH) + uuid (RANGE)
     const command = new GetItemCommand({
       TableName: config.leaseTableName,
       Key: {
-        leaseId: { S: leaseId },
+        userEmail: { S: userEmail },
+        uuid: { S: leaseId },
       },
     });
 
@@ -97,28 +103,29 @@ export async function lookupLease(leaseId: string): Promise<LeaseDetails> {
 
     // Check if item was found
     if (!response.Item) {
-      throw new LeaseLookupError(`Lease not found: ${leaseId}`);
+      throw new LeaseLookupError(`Lease not found: ${leaseId} for user ${userEmail}`);
     }
 
     // Unmarshall the DynamoDB item to a plain JavaScript object
     const item = unmarshall(response.Item);
 
-    // Validate that required fields are present
-    if (!item.leaseId || !item.accountId) {
+    // Validate that required fields are present (using ISB field names)
+    if (!item.uuid || !item.awsAccountId) {
       throw new LeaseLookupError(
-        `Lease ${leaseId} is missing required fields (leaseId or accountId)`
+        `Lease ${leaseId} is missing required fields (uuid or awsAccountId)`
       );
     }
 
-    // Return the lease details with proper typing
+    // Return the lease details, mapping ISB field names to our internal format
     return {
-      leaseId: item.leaseId as string,
-      accountId: item.accountId as string,
-      templateName: item.templateName as string | undefined,
-      budgetAmount: item.budgetAmount as number | undefined,
+      // Map ISB fields to our normalized format
+      leaseId: item.uuid as string,
+      accountId: item.awsAccountId as string,
+      templateName: item.originalLeaseTemplateName as string | undefined,
+      budgetAmount: item.maxSpend as number | undefined,
       status: item.status as string | undefined,
       expirationDate: item.expirationDate as string | undefined,
-      requesterEmail: item.requesterEmail as string | undefined,
+      userEmail: item.userEmail as string,
       // Include any additional attributes
       ...item,
     };
@@ -134,7 +141,7 @@ export async function lookupLease(leaseId: string): Promise<LeaseDetails> {
 
     // Provide descriptive error message
     throw new LeaseLookupError(
-      `Failed to lookup lease ${leaseId} in table ${config.leaseTableName}: ${errorName} - ${errorMessage}`,
+      `Failed to lookup lease ${leaseId} for user ${userEmail} in table ${config.leaseTableName}: ${errorName} - ${errorMessage}`,
       error
     );
   }
