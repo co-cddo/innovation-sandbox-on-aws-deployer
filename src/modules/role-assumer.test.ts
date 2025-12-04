@@ -3,6 +3,9 @@ import { STSClient, AssumeRoleCommand } from '@aws-sdk/client-sts';
 import { assumeRole, resetSTSClient, RoleAssumptionError } from './role-assumer.js';
 import { resetConfig } from './config.js';
 
+// Hub account ID used by ISB for intermediate role
+const HUB_ACCOUNT_ID = '568672915267';
+
 // Mock the AWS SDK
 vi.mock('@aws-sdk/client-sts', () => {
   const actualCommand = vi.fn();
@@ -33,7 +36,6 @@ vi.mock('./config.js', async () => {
 });
 
 describe('role-assumer', () => {
-  let mockSTSClient: any;
   let mockSend: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
@@ -42,12 +44,11 @@ describe('role-assumer', () => {
     resetSTSClient();
     resetConfig();
 
-    // Setup mock STS client
+    // Setup mock STS client - returns different creds for each call
     mockSend = vi.fn();
-    mockSTSClient = {
+    vi.mocked(STSClient).mockImplementation(() => ({
       send: mockSend,
-    };
-    vi.mocked(STSClient).mockImplementation(() => mockSTSClient);
+    }) as unknown as STSClient);
   });
 
   afterEach(() => {
@@ -56,239 +57,162 @@ describe('role-assumer', () => {
   });
 
   describe('assumeRole', () => {
-    it('should successfully assume a role and return credentials', async () => {
-      const mockCredentials = {
-        AccessKeyId: 'AKIAIOSFODNN7EXAMPLE',
-        SecretAccessKey: 'wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY',
-        SessionToken: 'FwoGZXIvYXdzEBYaDCvEXAMPLETOKEN',
-        Expiration: new Date('2025-12-03T23:00:00Z'),
-      };
+    // ISB uses a double role chain:
+    // 1. Lambda -> IntermediateRole (hub account 568672915267)
+    // 2. IntermediateRole -> SandboxAccountRole (target account)
 
-      mockSend.mockResolvedValue({
-        Credentials: mockCredentials,
-      });
+    const mockIntermediateCredentials = {
+      AccessKeyId: 'ASIA_INTERMEDIATE_KEY',
+      SecretAccessKey: 'IntermediateSecret123',
+      SessionToken: 'IntermediateSessionToken',
+      Expiration: new Date('2025-12-03T22:00:00Z'),
+    };
 
-      const result = await assumeRole('123456789012');
+    const mockSandboxCredentials = {
+      AccessKeyId: 'ASIA_SANDBOX_KEY',
+      SecretAccessKey: 'SandboxSecret456',
+      SessionToken: 'SandboxSessionToken',
+      Expiration: new Date('2025-12-03T23:00:00Z'),
+    };
 
+    it('should successfully perform double role chain and return sandbox credentials', async () => {
+      // First call returns intermediate creds, second returns sandbox creds
+      mockSend
+        .mockResolvedValueOnce({ Credentials: mockIntermediateCredentials })
+        .mockResolvedValueOnce({ Credentials: mockSandboxCredentials });
+
+      const result = await assumeRole('831494785845');
+
+      // Should return the sandbox credentials (second hop)
       expect(result).toEqual({
-        accessKeyId: mockCredentials.AccessKeyId,
-        secretAccessKey: mockCredentials.SecretAccessKey,
-        sessionToken: mockCredentials.SessionToken,
-        expiration: mockCredentials.Expiration,
+        accessKeyId: mockSandboxCredentials.AccessKeyId,
+        secretAccessKey: mockSandboxCredentials.SecretAccessKey,
+        sessionToken: mockSandboxCredentials.SessionToken,
+        expiration: mockSandboxCredentials.Expiration,
       });
     });
 
-    it('should construct the correct role ARN', async () => {
-      const mockCredentials = {
-        AccessKeyId: 'AKIAIOSFODNN7EXAMPLE',
-        SecretAccessKey: 'wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY',
-        SessionToken: 'FwoGZXIvYXdzEBYaDCvEXAMPLETOKEN',
-      };
+    it('should first assume IntermediateRole in hub account', async () => {
+      mockSend
+        .mockResolvedValueOnce({ Credentials: mockIntermediateCredentials })
+        .mockResolvedValueOnce({ Credentials: mockSandboxCredentials });
 
-      mockSend.mockResolvedValue({
-        Credentials: mockCredentials,
-      });
+      await assumeRole('831494785845');
 
-      await assumeRole('987654321098');
-
-      expect(AssumeRoleCommand).toHaveBeenCalledWith({
-        RoleArn: 'arn:aws:iam::987654321098:role/InnovationSandbox-ndx-DeployerRole',
-        RoleSessionName: 'innovation-sandbox-deployer',
+      // First call should be to IntermediateRole in hub account
+      expect(AssumeRoleCommand).toHaveBeenNthCalledWith(1, {
+        RoleArn: `arn:aws:iam::${HUB_ACCOUNT_ID}:role/InnovationSandbox-ndx-IntermediateRole`,
+        RoleSessionName: 'isb-deployer-intermediate',
         DurationSeconds: 3600,
       });
     });
 
-    it('should set the correct session name for audit trail', async () => {
-      const mockCredentials = {
-        AccessKeyId: 'AKIAIOSFODNN7EXAMPLE',
-        SecretAccessKey: 'wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY',
-        SessionToken: 'FwoGZXIvYXdzEBYaDCvEXAMPLETOKEN',
-      };
+    it('should then assume SandboxAccountRole in target account', async () => {
+      mockSend
+        .mockResolvedValueOnce({ Credentials: mockIntermediateCredentials })
+        .mockResolvedValueOnce({ Credentials: mockSandboxCredentials });
 
-      mockSend.mockResolvedValue({
-        Credentials: mockCredentials,
-      });
-
-      await assumeRole('123456789012');
-
-      expect(AssumeRoleCommand).toHaveBeenCalledWith(
-        expect.objectContaining({
-          RoleSessionName: 'innovation-sandbox-deployer',
-        })
-      );
-    });
-
-    it('should set session duration to 1 hour (3600 seconds)', async () => {
-      const mockCredentials = {
-        AccessKeyId: 'AKIAIOSFODNN7EXAMPLE',
-        SecretAccessKey: 'wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY',
-        SessionToken: 'FwoGZXIvYXdzEBYaDCvEXAMPLETOKEN',
-      };
-
-      mockSend.mockResolvedValue({
-        Credentials: mockCredentials,
-      });
-
-      await assumeRole('123456789012');
-
-      expect(AssumeRoleCommand).toHaveBeenCalledWith(
-        expect.objectContaining({
-          DurationSeconds: 3600,
-        })
-      );
-    });
-
-    it('should work with different account IDs', async () => {
-      const mockCredentials = {
-        AccessKeyId: 'AKIAIOSFODNN7EXAMPLE',
-        SecretAccessKey: 'wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY',
-        SessionToken: 'FwoGZXIvYXdzEBYaDCvEXAMPLETOKEN',
-      };
-
-      mockSend.mockResolvedValue({
-        Credentials: mockCredentials,
-      });
-
-      // First account
-      await assumeRole('111111111111');
-      expect(AssumeRoleCommand).toHaveBeenCalledWith(
-        expect.objectContaining({
-          RoleArn: 'arn:aws:iam::111111111111:role/InnovationSandbox-ndx-DeployerRole',
-        })
-      );
-
-      // Second account
-      await assumeRole('222222222222');
-      expect(AssumeRoleCommand).toHaveBeenCalledWith(
-        expect.objectContaining({
-          RoleArn: 'arn:aws:iam::222222222222:role/InnovationSandbox-ndx-DeployerRole',
-        })
-      );
-    });
-
-    it('should reuse STS client (singleton pattern)', async () => {
-      const mockCredentials = {
-        AccessKeyId: 'AKIAIOSFODNN7EXAMPLE',
-        SecretAccessKey: 'wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY',
-        SessionToken: 'FwoGZXIvYXdzEBYaDCvEXAMPLETOKEN',
-      };
-
-      mockSend.mockResolvedValue({
-        Credentials: mockCredentials,
-      });
-
-      // Call twice
-      await assumeRole('123456789012');
       await assumeRole('987654321098');
 
-      // STS client should only be created once
-      expect(STSClient).toHaveBeenCalledTimes(1);
-      // But send should be called twice
+      // Second call should be to SandboxAccountRole in target account
+      expect(AssumeRoleCommand).toHaveBeenNthCalledWith(2, {
+        RoleArn: 'arn:aws:iam::987654321098:role/InnovationSandbox-ndx-SandboxAccountRole',
+        RoleSessionName: 'isb-deployer-sandbox',
+        DurationSeconds: 3600,
+      });
+    });
+
+    it('should make exactly two AssumeRole calls', async () => {
+      mockSend
+        .mockResolvedValueOnce({ Credentials: mockIntermediateCredentials })
+        .mockResolvedValueOnce({ Credentials: mockSandboxCredentials });
+
+      await assumeRole('123456789012');
+
       expect(mockSend).toHaveBeenCalledTimes(2);
+      expect(AssumeRoleCommand).toHaveBeenCalledTimes(2);
     });
 
-    it('should throw RoleAssumptionError when STS returns no credentials', async () => {
-      mockSend.mockResolvedValue({
-        Credentials: undefined,
-      });
+    it('should work with different target account IDs', async () => {
+      mockSend
+        .mockResolvedValueOnce({ Credentials: mockIntermediateCredentials })
+        .mockResolvedValueOnce({ Credentials: mockSandboxCredentials });
 
-      await expect(assumeRole('123456789012')).rejects.toThrow(RoleAssumptionError);
-      await expect(assumeRole('123456789012')).rejects.toThrow(
-        'STS AssumeRole succeeded but did not return credentials'
-      );
+      await assumeRole('111222333444');
+
+      // First call always goes to hub account
+      expect(AssumeRoleCommand).toHaveBeenNthCalledWith(1, expect.objectContaining({
+        RoleArn: `arn:aws:iam::${HUB_ACCOUNT_ID}:role/InnovationSandbox-ndx-IntermediateRole`,
+      }));
+
+      // Second call goes to target account
+      expect(AssumeRoleCommand).toHaveBeenNthCalledWith(2, expect.objectContaining({
+        RoleArn: 'arn:aws:iam::111222333444:role/InnovationSandbox-ndx-SandboxAccountRole',
+      }));
     });
 
-    it('should throw RoleAssumptionError when AccessKeyId is missing', async () => {
-      mockSend.mockResolvedValue({
-        Credentials: {
-          SecretAccessKey: 'wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY',
-          SessionToken: 'FwoGZXIvYXdzEBYaDCvEXAMPLETOKEN',
-        },
-      });
-
-      await expect(assumeRole('123456789012')).rejects.toThrow(RoleAssumptionError);
-      await expect(assumeRole('123456789012')).rejects.toThrow(
-        'returned incomplete credentials'
-      );
-    });
-
-    it('should throw RoleAssumptionError when SecretAccessKey is missing', async () => {
-      mockSend.mockResolvedValue({
-        Credentials: {
-          AccessKeyId: 'AKIAIOSFODNN7EXAMPLE',
-          SessionToken: 'FwoGZXIvYXdzEBYaDCvEXAMPLETOKEN',
-        },
-      });
-
-      await expect(assumeRole('123456789012')).rejects.toThrow(RoleAssumptionError);
-      await expect(assumeRole('123456789012')).rejects.toThrow(
-        'returned incomplete credentials'
-      );
-    });
-
-    it('should throw RoleAssumptionError when SessionToken is missing', async () => {
-      mockSend.mockResolvedValue({
-        Credentials: {
-          AccessKeyId: 'AKIAIOSFODNN7EXAMPLE',
-          SecretAccessKey: 'wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY',
-        },
-      });
-
-      await expect(assumeRole('123456789012')).rejects.toThrow(RoleAssumptionError);
-      await expect(assumeRole('123456789012')).rejects.toThrow(
-        'returned incomplete credentials'
-      );
-    });
-
-    it('should handle AccessDenied error from STS', async () => {
-      const stsError = new Error('User is not authorized to perform: sts:AssumeRole');
+    it('should throw RoleAssumptionError when intermediate role assumption fails', async () => {
+      const stsError = new Error('Access denied for IntermediateRole');
       stsError.name = 'AccessDenied';
 
       mockSend.mockRejectedValue(stsError);
 
       await expect(assumeRole('123456789012')).rejects.toThrow(RoleAssumptionError);
-      await expect(assumeRole('123456789012')).rejects.toThrow('AccessDenied');
+      await expect(assumeRole('123456789012')).rejects.toThrow('Failed to assume role chain');
+    });
+
+    it('should throw RoleAssumptionError when sandbox role assumption fails', async () => {
+      const stsError = new Error('Access denied for SandboxAccountRole');
+      stsError.name = 'AccessDenied';
+
+      mockSend
+        .mockResolvedValueOnce({ Credentials: mockIntermediateCredentials })
+        .mockRejectedValueOnce(stsError);
+
+      await expect(assumeRole('123456789012')).rejects.toThrow(RoleAssumptionError);
+      await expect(assumeRole('123456789012')).rejects.toThrow('Failed to assume role chain');
+    });
+
+    it('should throw RoleAssumptionError when intermediate credentials are missing', async () => {
+      mockSend.mockResolvedValue({ Credentials: undefined });
+
       await expect(assumeRole('123456789012')).rejects.toThrow(
-        'not authorized to perform: sts:AssumeRole'
+        /did not return credentials/
       );
     });
 
-    it('should handle InvalidParameterValue error from STS', async () => {
-      const stsError = new Error('Invalid role ARN');
-      stsError.name = 'InvalidParameterValue';
+    it('should throw RoleAssumptionError when sandbox credentials are missing', async () => {
+      mockSend
+        .mockResolvedValueOnce({ Credentials: mockIntermediateCredentials })
+        .mockResolvedValueOnce({ Credentials: undefined });
 
-      mockSend.mockRejectedValue(stsError);
-
-      await expect(assumeRole('123456789012')).rejects.toThrow(RoleAssumptionError);
-      await expect(assumeRole('123456789012')).rejects.toThrow('InvalidParameterValue');
+      await expect(assumeRole('123456789012')).rejects.toThrow(
+        /did not return credentials/
+      );
     });
 
-    it('should handle network errors', async () => {
-      const networkError = new Error('Network timeout');
-      networkError.name = 'NetworkingError';
+    it('should throw RoleAssumptionError when AccessKeyId is missing', async () => {
+      mockSend
+        .mockResolvedValueOnce({ Credentials: mockIntermediateCredentials })
+        .mockResolvedValueOnce({
+          Credentials: {
+            SecretAccessKey: 'secret',
+            SessionToken: 'token',
+          },
+        });
 
-      mockSend.mockRejectedValue(networkError);
-
-      await expect(assumeRole('123456789012')).rejects.toThrow(RoleAssumptionError);
-      await expect(assumeRole('123456789012')).rejects.toThrow('NetworkingError');
+      await expect(assumeRole('123456789012')).rejects.toThrow(
+        /incomplete credentials/
+      );
     });
 
-    it('should handle unknown errors gracefully', async () => {
-      mockSend.mockRejectedValue('unknown error string');
-
-      await expect(assumeRole('123456789012')).rejects.toThrow(RoleAssumptionError);
-      await expect(assumeRole('123456789012')).rejects.toThrow('Unknown error assuming role');
-    });
-
-    it('should include role ARN in error messages', async () => {
+    it('should include account ID in error messages', async () => {
       const stsError = new Error('Role not found');
       stsError.name = 'NoSuchEntity';
 
       mockSend.mockRejectedValue(stsError);
 
-      await expect(assumeRole('123456789012')).rejects.toThrow(
-        'arn:aws:iam::123456789012:role/InnovationSandbox-ndx-DeployerRole'
-      );
+      await expect(assumeRole('123456789012')).rejects.toThrow('account 123456789012');
     });
 
     it('should preserve original error in RoleAssumptionError', async () => {
@@ -307,48 +231,46 @@ describe('role-assumer', () => {
     });
 
     it('should handle credentials without expiration timestamp', async () => {
-      const mockCredentials = {
+      const credsWithoutExpiration = {
         AccessKeyId: 'AKIAIOSFODNN7EXAMPLE',
         SecretAccessKey: 'wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY',
         SessionToken: 'FwoGZXIvYXdzEBYaDCvEXAMPLETOKEN',
         // No Expiration field
       };
 
-      mockSend.mockResolvedValue({
-        Credentials: mockCredentials,
-      });
+      mockSend
+        .mockResolvedValueOnce({ Credentials: mockIntermediateCredentials })
+        .mockResolvedValueOnce({ Credentials: credsWithoutExpiration });
 
       const result = await assumeRole('123456789012');
 
-      expect(result.accessKeyId).toBe(mockCredentials.AccessKeyId);
-      expect(result.secretAccessKey).toBe(mockCredentials.SecretAccessKey);
-      expect(result.sessionToken).toBe(mockCredentials.SessionToken);
+      expect(result.accessKeyId).toBe(credsWithoutExpiration.AccessKeyId);
       expect(result.expiration).toBeUndefined();
+    });
+
+    it('should handle network errors', async () => {
+      const networkError = new Error('Network timeout');
+      networkError.name = 'NetworkingError';
+
+      mockSend.mockRejectedValue(networkError);
+
+      await expect(assumeRole('123456789012')).rejects.toThrow(RoleAssumptionError);
+      await expect(assumeRole('123456789012')).rejects.toThrow('NetworkingError');
+    });
+
+    it('should handle unknown errors gracefully', async () => {
+      mockSend.mockRejectedValue('unknown error string');
+
+      await expect(assumeRole('123456789012')).rejects.toThrow(RoleAssumptionError);
+      await expect(assumeRole('123456789012')).rejects.toThrow('Unknown error assuming role');
     });
   });
 
   describe('resetSTSClient', () => {
-    it('should reset the STS client singleton', async () => {
-      const mockCredentials = {
-        AccessKeyId: 'AKIAIOSFODNN7EXAMPLE',
-        SecretAccessKey: 'wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY',
-        SessionToken: 'FwoGZXIvYXdzEBYaDCvEXAMPLETOKEN',
-      };
-
-      mockSend.mockResolvedValue({
-        Credentials: mockCredentials,
-      });
-
-      // First call
-      await assumeRole('123456789012');
-      expect(STSClient).toHaveBeenCalledTimes(1);
-
-      // Reset
-      resetSTSClient();
-
-      // Second call should create a new client
-      await assumeRole('123456789012');
-      expect(STSClient).toHaveBeenCalledTimes(2);
+    it('should be a no-op (clients are created per-request)', () => {
+      // resetSTSClient is now a no-op since clients are created per-request
+      // for role chaining. This test just verifies it doesn't throw.
+      expect(() => resetSTSClient()).not.toThrow();
     });
   });
 

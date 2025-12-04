@@ -33,7 +33,7 @@ vi.mock('./config.js', async () => {
 });
 
 describe('lease-lookup', () => {
-  let mockDynamoDBClient: any;
+  let mockDynamoDBClient: { send: ReturnType<typeof vi.fn> };
   let mockSend: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
@@ -47,7 +47,7 @@ describe('lease-lookup', () => {
     mockDynamoDBClient = {
       send: mockSend,
     };
-    vi.mocked(DynamoDBClient).mockImplementation(() => mockDynamoDBClient);
+    vi.mocked(DynamoDBClient).mockImplementation(() => mockDynamoDBClient as unknown as DynamoDBClient);
   });
 
   afterEach(() => {
@@ -56,65 +56,75 @@ describe('lease-lookup', () => {
   });
 
   describe('lookupLease', () => {
+    // ISB DynamoDB schema uses:
+    // - userEmail as HASH key
+    // - uuid as RANGE key
+    // - awsAccountId for target account
+    // - originalLeaseTemplateName for template
+    // - maxSpend for budget
+
     it('should successfully lookup a lease and return details', async () => {
       const mockItem = {
-        leaseId: { S: 'lease-12345' },
-        accountId: { S: '123456789012' },
-        templateName: { S: 'basic-vpc' },
-        budgetAmount: { N: '500' },
-        status: { S: 'active' },
+        userEmail: { S: 'user@example.gov.uk' },
+        uuid: { S: 'f2d3eb78-907a-4c20-8127-7ce45758836d' },
+        awsAccountId: { S: '123456789012' },
+        originalLeaseTemplateName: { S: 'basic-vpc' },
+        maxSpend: { N: '500' },
+        status: { S: 'Active' },
         expirationDate: { S: '2025-12-31T23:59:59Z' },
-        requesterEmail: { S: 'user@example.com' },
       };
 
       mockSend.mockResolvedValue({
         Item: mockItem,
       });
 
-      const result = await lookupLease('lease-12345');
+      const result = await lookupLease('user@example.gov.uk', 'f2d3eb78-907a-4c20-8127-7ce45758836d');
 
-      expect(result).toEqual({
-        leaseId: 'lease-12345',
+      expect(result).toMatchObject({
+        leaseId: 'f2d3eb78-907a-4c20-8127-7ce45758836d',
         accountId: '123456789012',
         templateName: 'basic-vpc',
         budgetAmount: 500,
-        status: 'active',
+        status: 'Active',
         expirationDate: '2025-12-31T23:59:59Z',
-        requesterEmail: 'user@example.com',
+        userEmail: 'user@example.gov.uk',
       });
     });
 
-    it('should query DynamoDB with correct parameters', async () => {
+    it('should query DynamoDB with correct composite key parameters', async () => {
       const mockItem = {
-        leaseId: { S: 'lease-67890' },
-        accountId: { S: '987654321098' },
+        userEmail: { S: 'test@example.gov.uk' },
+        uuid: { S: 'lease-67890' },
+        awsAccountId: { S: '987654321098' },
       };
 
       mockSend.mockResolvedValue({
         Item: mockItem,
       });
 
-      await lookupLease('lease-67890');
+      await lookupLease('test@example.gov.uk', 'lease-67890');
 
       expect(GetItemCommand).toHaveBeenCalledWith({
         TableName: 'isb-leases-test',
         Key: {
-          leaseId: { S: 'lease-67890' },
+          userEmail: { S: 'test@example.gov.uk' },
+          uuid: { S: 'lease-67890' },
         },
       });
     });
 
     it('should use the configured table name from environment', async () => {
       const mockItem = {
-        leaseId: { S: 'lease-12345' },
-        accountId: { S: '123456789012' },
+        userEmail: { S: 'user@example.gov.uk' },
+        uuid: { S: 'lease-12345' },
+        awsAccountId: { S: '123456789012' },
       };
 
       mockSend.mockResolvedValue({
         Item: mockItem,
       });
 
-      await lookupLease('lease-12345');
+      await lookupLease('user@example.gov.uk', 'lease-12345');
 
       expect(GetItemCommand).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -125,15 +135,16 @@ describe('lease-lookup', () => {
 
     it('should handle lease with minimal required fields', async () => {
       const mockItem = {
-        leaseId: { S: 'lease-minimal' },
-        accountId: { S: '111111111111' },
+        userEmail: { S: 'user@example.gov.uk' },
+        uuid: { S: 'lease-minimal' },
+        awsAccountId: { S: '111111111111' },
       };
 
       mockSend.mockResolvedValue({
         Item: mockItem,
       });
 
-      const result = await lookupLease('lease-minimal');
+      const result = await lookupLease('user@example.gov.uk', 'lease-minimal');
 
       expect(result.leaseId).toBe('lease-minimal');
       expect(result.accountId).toBe('111111111111');
@@ -143,17 +154,18 @@ describe('lease-lookup', () => {
 
     it('should handle lease with optional fields missing', async () => {
       const mockItem = {
-        leaseId: { S: 'lease-partial' },
-        accountId: { S: '222222222222' },
-        templateName: { S: 'ec2-instance' },
-        // budgetAmount, status, expirationDate, requesterEmail missing
+        userEmail: { S: 'user@example.gov.uk' },
+        uuid: { S: 'lease-partial' },
+        awsAccountId: { S: '222222222222' },
+        originalLeaseTemplateName: { S: 'ec2-instance' },
+        // maxSpend, status, expirationDate missing
       };
 
       mockSend.mockResolvedValue({
         Item: mockItem,
       });
 
-      const result = await lookupLease('lease-partial');
+      const result = await lookupLease('user@example.gov.uk', 'lease-partial');
 
       expect(result.leaseId).toBe('lease-partial');
       expect(result.accountId).toBe('222222222222');
@@ -161,14 +173,14 @@ describe('lease-lookup', () => {
       expect(result.budgetAmount).toBeUndefined();
       expect(result.status).toBeUndefined();
       expect(result.expirationDate).toBeUndefined();
-      expect(result.requesterEmail).toBeUndefined();
     });
 
     it('should handle lease with additional custom attributes', async () => {
       const mockItem = {
-        leaseId: { S: 'lease-custom' },
-        accountId: { S: '333333333333' },
-        templateName: { S: 's3-bucket' },
+        userEmail: { S: 'user@example.gov.uk' },
+        uuid: { S: 'lease-custom' },
+        awsAccountId: { S: '333333333333' },
+        originalLeaseTemplateName: { S: 's3-bucket' },
         customField1: { S: 'custom-value-1' },
         customField2: { N: '42' },
         customField3: { BOOL: true },
@@ -178,7 +190,7 @@ describe('lease-lookup', () => {
         Item: mockItem,
       });
 
-      const result = await lookupLease('lease-custom');
+      const result = await lookupLease('user@example.gov.uk', 'lease-custom');
 
       expect(result.leaseId).toBe('lease-custom');
       expect(result.accountId).toBe('333333333333');
@@ -187,32 +199,35 @@ describe('lease-lookup', () => {
       expect(result.customField3).toBe(true);
     });
 
-    it('should handle different lease IDs', async () => {
+    it('should handle different lease IDs for same user', async () => {
       const mockItem1 = {
-        leaseId: { S: 'lease-aaa' },
-        accountId: { S: '111111111111' },
+        userEmail: { S: 'user@example.gov.uk' },
+        uuid: { S: 'lease-aaa' },
+        awsAccountId: { S: '111111111111' },
       };
 
       const mockItem2 = {
-        leaseId: { S: 'lease-bbb' },
-        accountId: { S: '222222222222' },
+        userEmail: { S: 'user@example.gov.uk' },
+        uuid: { S: 'lease-bbb' },
+        awsAccountId: { S: '222222222222' },
       };
 
       mockSend
         .mockResolvedValueOnce({ Item: mockItem1 })
         .mockResolvedValueOnce({ Item: mockItem2 });
 
-      const result1 = await lookupLease('lease-aaa');
+      const result1 = await lookupLease('user@example.gov.uk', 'lease-aaa');
       expect(result1.leaseId).toBe('lease-aaa');
 
-      const result2 = await lookupLease('lease-bbb');
+      const result2 = await lookupLease('user@example.gov.uk', 'lease-bbb');
       expect(result2.leaseId).toBe('lease-bbb');
     });
 
     it('should reuse DynamoDB client (singleton pattern)', async () => {
       const mockItem = {
-        leaseId: { S: 'lease-12345' },
-        accountId: { S: '123456789012' },
+        userEmail: { S: 'user@example.gov.uk' },
+        uuid: { S: 'lease-12345' },
+        awsAccountId: { S: '123456789012' },
       };
 
       mockSend.mockResolvedValue({
@@ -220,8 +235,8 @@ describe('lease-lookup', () => {
       });
 
       // Call twice
-      await lookupLease('lease-12345');
-      await lookupLease('lease-67890');
+      await lookupLease('user@example.gov.uk', 'lease-12345');
+      await lookupLease('user@example.gov.uk', 'lease-67890');
 
       // DynamoDB client should only be created once
       expect(DynamoDBClient).toHaveBeenCalledTimes(1);
@@ -234,9 +249,9 @@ describe('lease-lookup', () => {
         Item: undefined,
       });
 
-      await expect(lookupLease('lease-notfound')).rejects.toThrow(LeaseLookupError);
-      await expect(lookupLease('lease-notfound')).rejects.toThrow(
-        'Lease not found: lease-notfound'
+      await expect(lookupLease('user@example.gov.uk', 'lease-notfound')).rejects.toThrow(LeaseLookupError);
+      await expect(lookupLease('user@example.gov.uk', 'lease-notfound')).rejects.toThrow(
+        'Lease not found: lease-notfound for user user@example.gov.uk'
       );
     });
 
@@ -245,39 +260,43 @@ describe('lease-lookup', () => {
         Item: null,
       });
 
-      await expect(lookupLease('lease-null')).rejects.toThrow(LeaseLookupError);
-      await expect(lookupLease('lease-null')).rejects.toThrow('Lease not found: lease-null');
-    });
-
-    it('should throw LeaseLookupError when leaseId is missing in response', async () => {
-      const mockItem = {
-        // leaseId missing
-        accountId: { S: '123456789012' },
-      };
-
-      mockSend.mockResolvedValue({
-        Item: mockItem,
-      });
-
-      await expect(lookupLease('lease-bad')).rejects.toThrow(LeaseLookupError);
-      await expect(lookupLease('lease-bad')).rejects.toThrow(
-        'missing required fields (leaseId or accountId)'
+      await expect(lookupLease('user@example.gov.uk', 'lease-null')).rejects.toThrow(LeaseLookupError);
+      await expect(lookupLease('user@example.gov.uk', 'lease-null')).rejects.toThrow(
+        'Lease not found: lease-null for user user@example.gov.uk'
       );
     });
 
-    it('should throw LeaseLookupError when accountId is missing in response', async () => {
+    it('should throw LeaseLookupError when uuid is missing in response', async () => {
       const mockItem = {
-        leaseId: { S: 'lease-bad' },
-        // accountId missing
+        userEmail: { S: 'user@example.gov.uk' },
+        // uuid missing
+        awsAccountId: { S: '123456789012' },
       };
 
       mockSend.mockResolvedValue({
         Item: mockItem,
       });
 
-      await expect(lookupLease('lease-bad')).rejects.toThrow(LeaseLookupError);
-      await expect(lookupLease('lease-bad')).rejects.toThrow(
-        'missing required fields (leaseId or accountId)'
+      await expect(lookupLease('user@example.gov.uk', 'lease-bad')).rejects.toThrow(LeaseLookupError);
+      await expect(lookupLease('user@example.gov.uk', 'lease-bad')).rejects.toThrow(
+        'missing required fields (uuid or awsAccountId)'
+      );
+    });
+
+    it('should throw LeaseLookupError when awsAccountId is missing in response', async () => {
+      const mockItem = {
+        userEmail: { S: 'user@example.gov.uk' },
+        uuid: { S: 'lease-bad' },
+        // awsAccountId missing
+      };
+
+      mockSend.mockResolvedValue({
+        Item: mockItem,
+      });
+
+      await expect(lookupLease('user@example.gov.uk', 'lease-bad')).rejects.toThrow(LeaseLookupError);
+      await expect(lookupLease('user@example.gov.uk', 'lease-bad')).rejects.toThrow(
+        'missing required fields (uuid or awsAccountId)'
       );
     });
 
@@ -287,9 +306,9 @@ describe('lease-lookup', () => {
 
       mockSend.mockRejectedValue(dynamoError);
 
-      await expect(lookupLease('lease-12345')).rejects.toThrow(LeaseLookupError);
-      await expect(lookupLease('lease-12345')).rejects.toThrow('ResourceNotFoundException');
-      await expect(lookupLease('lease-12345')).rejects.toThrow('Requested resource not found');
+      await expect(lookupLease('user@example.gov.uk', 'lease-12345')).rejects.toThrow(LeaseLookupError);
+      await expect(lookupLease('user@example.gov.uk', 'lease-12345')).rejects.toThrow('ResourceNotFoundException');
+      await expect(lookupLease('user@example.gov.uk', 'lease-12345')).rejects.toThrow('Requested resource not found');
     });
 
     it('should handle ValidationException from DynamoDB', async () => {
@@ -298,8 +317,8 @@ describe('lease-lookup', () => {
 
       mockSend.mockRejectedValue(dynamoError);
 
-      await expect(lookupLease('lease-12345')).rejects.toThrow(LeaseLookupError);
-      await expect(lookupLease('lease-12345')).rejects.toThrow('ValidationException');
+      await expect(lookupLease('user@example.gov.uk', 'lease-12345')).rejects.toThrow(LeaseLookupError);
+      await expect(lookupLease('user@example.gov.uk', 'lease-12345')).rejects.toThrow('ValidationException');
     });
 
     it('should handle ProvisionedThroughputExceededException', async () => {
@@ -308,8 +327,8 @@ describe('lease-lookup', () => {
 
       mockSend.mockRejectedValue(dynamoError);
 
-      await expect(lookupLease('lease-12345')).rejects.toThrow(LeaseLookupError);
-      await expect(lookupLease('lease-12345')).rejects.toThrow(
+      await expect(lookupLease('user@example.gov.uk', 'lease-12345')).rejects.toThrow(LeaseLookupError);
+      await expect(lookupLease('user@example.gov.uk', 'lease-12345')).rejects.toThrow(
         'ProvisionedThroughputExceededException'
       );
     });
@@ -320,8 +339,8 @@ describe('lease-lookup', () => {
 
       mockSend.mockRejectedValue(dynamoError);
 
-      await expect(lookupLease('lease-12345')).rejects.toThrow(LeaseLookupError);
-      await expect(lookupLease('lease-12345')).rejects.toThrow('InternalServerError');
+      await expect(lookupLease('user@example.gov.uk', 'lease-12345')).rejects.toThrow(LeaseLookupError);
+      await expect(lookupLease('user@example.gov.uk', 'lease-12345')).rejects.toThrow('InternalServerError');
     });
 
     it('should handle network errors', async () => {
@@ -330,25 +349,26 @@ describe('lease-lookup', () => {
 
       mockSend.mockRejectedValue(networkError);
 
-      await expect(lookupLease('lease-12345')).rejects.toThrow(LeaseLookupError);
-      await expect(lookupLease('lease-12345')).rejects.toThrow('NetworkingError');
+      await expect(lookupLease('user@example.gov.uk', 'lease-12345')).rejects.toThrow(LeaseLookupError);
+      await expect(lookupLease('user@example.gov.uk', 'lease-12345')).rejects.toThrow('NetworkingError');
     });
 
     it('should handle unknown errors gracefully', async () => {
       mockSend.mockRejectedValue('unknown error string');
 
-      await expect(lookupLease('lease-12345')).rejects.toThrow(LeaseLookupError);
-      await expect(lookupLease('lease-12345')).rejects.toThrow('Unknown error looking up lease');
+      await expect(lookupLease('user@example.gov.uk', 'lease-12345')).rejects.toThrow(LeaseLookupError);
+      await expect(lookupLease('user@example.gov.uk', 'lease-12345')).rejects.toThrow('Unknown error looking up lease');
     });
 
-    it('should include lease ID and table name in error messages', async () => {
+    it('should include lease ID, user email and table name in error messages', async () => {
       const dynamoError = new Error('Table access denied');
       dynamoError.name = 'AccessDeniedException';
 
       mockSend.mockRejectedValue(dynamoError);
 
-      await expect(lookupLease('lease-12345')).rejects.toThrow('lease-12345');
-      await expect(lookupLease('lease-12345')).rejects.toThrow('isb-leases-test');
+      await expect(lookupLease('user@example.gov.uk', 'lease-12345')).rejects.toThrow('lease-12345');
+      await expect(lookupLease('user@example.gov.uk', 'lease-12345')).rejects.toThrow('user@example.gov.uk');
+      await expect(lookupLease('user@example.gov.uk', 'lease-12345')).rejects.toThrow('isb-leases-test');
     });
 
     it('should preserve original error in LeaseLookupError', async () => {
@@ -358,7 +378,7 @@ describe('lease-lookup', () => {
       mockSend.mockRejectedValue(originalError);
 
       try {
-        await lookupLease('lease-12345');
+        await lookupLease('user@example.gov.uk', 'lease-12345');
         expect.fail('Should have thrown');
       } catch (error) {
         expect(error).toBeInstanceOf(LeaseLookupError);
@@ -368,43 +388,46 @@ describe('lease-lookup', () => {
 
     it('should handle lease with budget as number zero', async () => {
       const mockItem = {
-        leaseId: { S: 'lease-zero-budget' },
-        accountId: { S: '444444444444' },
-        budgetAmount: { N: '0' },
+        userEmail: { S: 'user@example.gov.uk' },
+        uuid: { S: 'lease-zero-budget' },
+        awsAccountId: { S: '444444444444' },
+        maxSpend: { N: '0' },
       };
 
       mockSend.mockResolvedValue({
         Item: mockItem,
       });
 
-      const result = await lookupLease('lease-zero-budget');
+      const result = await lookupLease('user@example.gov.uk', 'lease-zero-budget');
 
       expect(result.budgetAmount).toBe(0);
     });
 
     it('should handle lease with large budget amount', async () => {
       const mockItem = {
-        leaseId: { S: 'lease-large-budget' },
-        accountId: { S: '555555555555' },
-        budgetAmount: { N: '1000000' },
+        userEmail: { S: 'user@example.gov.uk' },
+        uuid: { S: 'lease-large-budget' },
+        awsAccountId: { S: '555555555555' },
+        maxSpend: { N: '1000000' },
       };
 
       mockSend.mockResolvedValue({
         Item: mockItem,
       });
 
-      const result = await lookupLease('lease-large-budget');
+      const result = await lookupLease('user@example.gov.uk', 'lease-large-budget');
 
       expect(result.budgetAmount).toBe(1000000);
     });
 
     it('should handle lease with various status values', async () => {
-      const statuses = ['active', 'pending', 'expired', 'terminated'];
+      const statuses = ['Active', 'Pending', 'Expired', 'Frozen'];
 
       for (const status of statuses) {
         const mockItem = {
-          leaseId: { S: `lease-${status}` },
-          accountId: { S: '666666666666' },
+          userEmail: { S: 'user@example.gov.uk' },
+          uuid: { S: `lease-${status.toLowerCase()}` },
+          awsAccountId: { S: '666666666666' },
           status: { S: status },
         };
 
@@ -412,16 +435,17 @@ describe('lease-lookup', () => {
           Item: mockItem,
         });
 
-        const result = await lookupLease(`lease-${status}`);
+        const result = await lookupLease('user@example.gov.uk', `lease-${status.toLowerCase()}`);
         expect(result.status).toBe(status);
       }
     });
 
     it('should handle empty string values in optional fields', async () => {
       const mockItem = {
-        leaseId: { S: 'lease-empty-strings' },
-        accountId: { S: '777777777777' },
-        templateName: { S: '' },
+        userEmail: { S: 'user@example.gov.uk' },
+        uuid: { S: 'lease-empty-strings' },
+        awsAccountId: { S: '777777777777' },
+        originalLeaseTemplateName: { S: '' },
         status: { S: '' },
       };
 
@@ -429,7 +453,7 @@ describe('lease-lookup', () => {
         Item: mockItem,
       });
 
-      const result = await lookupLease('lease-empty-strings');
+      const result = await lookupLease('user@example.gov.uk', 'lease-empty-strings');
 
       expect(result.templateName).toBe('');
       expect(result.status).toBe('');
@@ -439,8 +463,9 @@ describe('lease-lookup', () => {
   describe('resetDynamoDBClient', () => {
     it('should reset the DynamoDB client singleton', async () => {
       const mockItem = {
-        leaseId: { S: 'lease-12345' },
-        accountId: { S: '123456789012' },
+        userEmail: { S: 'user@example.gov.uk' },
+        uuid: { S: 'lease-12345' },
+        awsAccountId: { S: '123456789012' },
       };
 
       mockSend.mockResolvedValue({
@@ -448,14 +473,14 @@ describe('lease-lookup', () => {
       });
 
       // First call
-      await lookupLease('lease-12345');
+      await lookupLease('user@example.gov.uk', 'lease-12345');
       expect(DynamoDBClient).toHaveBeenCalledTimes(1);
 
       // Reset
       resetDynamoDBClient();
 
       // Second call should create a new client
-      await lookupLease('lease-12345');
+      await lookupLease('user@example.gov.uk', 'lease-12345');
       expect(DynamoDBClient).toHaveBeenCalledTimes(2);
     });
   });
