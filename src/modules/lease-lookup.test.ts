@@ -26,7 +26,7 @@ vi.mock('./config.js', async () => {
       githubBranch: 'main',
       githubPath: 'cloudformation/scenarios',
       leaseTableName: 'isb-leases-test',
-      eventSource: 'isb-deployer',
+      eventSource: 'innovation-sandbox',
       logLevel: 'INFO' as const,
     })),
   };

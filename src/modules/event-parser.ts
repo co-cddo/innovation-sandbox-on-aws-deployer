@@ -30,7 +30,7 @@ function isObject(value: unknown): value is Record<string, unknown> {
  * const event = {
  *   version: '0',
  *   id: 'event-123',
- *   'detail-type': 'Lease Approved',
+ *   'detail-type': 'LeaseApproved',
  *   source: 'innovation-sandbox',
  *   account: '123456789012',
  *   time: '2024-01-01T00:00:00Z',

@@ -306,8 +306,8 @@ Resources:
         - Key: Environment
           Value: !Ref Environment
 
-  # EventBridge Rule for Lease Approved Events
-  # Filters events from the innovation-sandbox source with detail-type 'Lease Approved'
+  # EventBridge Rule for LeaseApproved Events
+  # Filters events from the innovation-sandbox source with detail-type 'LeaseApproved'
   # and triggers the DeployerFunction Lambda
   LeaseApprovedRule:
     Type: AWS::Events::Rule
@@ -320,7 +320,7 @@ Resources:
         source:
           - !Ref EventSource
         detail-type:
-          - 'Lease Approved'
+          - 'LeaseApproved'
       Targets:
         - Id: DeployerLambdaTarget
           Arn: !GetAtt DeployerFunction.Arn

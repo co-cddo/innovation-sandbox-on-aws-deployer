@@ -61,7 +61,7 @@ The system follows an **Event-Driven Serverless** pattern with a single Lambda f
 
 **Interaction Flow:**
 ```
-ISB Lease Approved → EventBridge → Lambda → [DynamoDB lookup] → [GitHub fetch]
+ISB LeaseApproved → EventBridge → Lambda → [DynamoDB lookup] → [GitHub fetch]
                                          → [STS AssumeRole] → [CF Deploy]
                                          → EventBridge (success/failure)
 ```
@@ -86,7 +86,7 @@ flowchart TB
         cf["CloudFormation<br/>(Stack)"]
     end
 
-    eb_in -->|"Lease Approved"| lambda
+    eb_in -->|"LeaseApproved"| lambda
     lambda -->|"GetItem"| ddb
     lambda -->|"Fetch template"| gh
     lambda -->|"AssumeRole"| sts
@@ -422,12 +422,12 @@ This service is **event-driven** and doesn't expose a REST API.
 
 ### Event Contracts
 
-#### Input: Lease Approved
+#### Input: LeaseApproved
 
 ```json
 {
   "source": ["innovation-sandbox"],
-  "detail-type": ["Lease Approved"],
+  "detail-type": ["LeaseApproved"],
   "detail": {
     "leaseId": "lease-123",
     "accountId": "123456789012",
@@ -728,7 +728,7 @@ Not applicable - Lambda handles distribution automatically.
 **Event Pattern:**
 - Source: `innovation-sandbox` (input)
 - Source: `isb-deployer` (output)
-- Detail types: `Lease Approved`, `Deployment Succeeded`, `Deployment Failed`
+- Detail types: `LeaseApproved`, `Deployment Succeeded`, `Deployment Failed`
 
 ---
 

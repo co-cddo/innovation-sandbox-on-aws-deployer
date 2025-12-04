@@ -58,7 +58,7 @@ export interface DeploymentFailureDetail {
  * emission failures don't block the deployment workflow.
  *
  * Event structure:
- * - Source: Configured via EVENT_SOURCE env var (default: 'isb-deployer')
+ * - Source: Configured via EVENT_SOURCE env var (default: 'innovation-sandbox')
  * - DetailType: 'Deployment Succeeded'
  * - Detail: JSON payload with deployment information
  *
@@ -236,7 +236,7 @@ export function categorizeError(error: {
  * for better event routing and handling downstream.
  *
  * Event structure:
- * - Source: Configured via EVENT_SOURCE env var (default: 'isb-deployer')
+ * - Source: Configured via EVENT_SOURCE env var (default: 'innovation-sandbox')
  * - DetailType: 'Deployment Failed'
  * - Detail: JSON payload with error and deployment information
  *

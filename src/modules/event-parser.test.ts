@@ -9,7 +9,7 @@ describe('event-parser module', () => {
         const event = {
           version: '0',
           id: 'event-123',
-          'detail-type': 'Lease Approved',
+          'detail-type': 'LeaseApproved',
           source: 'innovation-sandbox',
           account: '123456789012',
           time: '2024-01-01T00:00:00Z',
@@ -35,7 +35,7 @@ describe('event-parser module', () => {
         const event = {
           version: '0',
           id: 'event-456',
-          'detail-type': 'Lease Approved',
+          'detail-type': 'LeaseApproved',
           source: 'innovation-sandbox',
           account: '123456789012',
           time: '2024-01-01T00:00:00Z',
@@ -62,7 +62,7 @@ describe('event-parser module', () => {
         const event = {
           version: '0',
           id: 'event-789',
-          'detail-type': 'Lease Approved',
+          'detail-type': 'LeaseApproved',
           source: 'innovation-sandbox',
           account: '123456789012',
           time: '2024-01-01T00:00:00Z',
@@ -92,7 +92,7 @@ describe('event-parser module', () => {
         const event = {
           version: '0',
           id: 'event-empty-template',
-          'detail-type': 'Lease Approved',
+          'detail-type': 'LeaseApproved',
           source: 'innovation-sandbox',
           account: '123456789012',
           time: '2024-01-01T00:00:00Z',
@@ -114,7 +114,7 @@ describe('event-parser module', () => {
         const event = {
           version: '0',
           id: 'event-whitespace-template',
-          'detail-type': 'Lease Approved',
+          'detail-type': 'LeaseApproved',
           source: 'innovation-sandbox',
           account: '123456789012',
           time: '2024-01-01T00:00:00Z',
@@ -160,7 +160,7 @@ describe('event-parser module', () => {
         const event = {
           version: '0',
           id: 'event-trim',
-          'detail-type': 'Lease Approved',
+          'detail-type': 'LeaseApproved',
           source: 'innovation-sandbox',
           account: '123456789012',
           time: '2024-01-01T00:00:00Z',
@@ -218,7 +218,7 @@ describe('event-parser module', () => {
         const event = {
           version: '0',
           id: 'event-no-detail',
-          'detail-type': 'Lease Approved',
+          'detail-type': 'LeaseApproved',
           source: 'innovation-sandbox',
         };
 
@@ -229,7 +229,7 @@ describe('event-parser module', () => {
         const event = {
           version: '0',
           id: 'event-null-detail',
-          'detail-type': 'Lease Approved',
+          'detail-type': 'LeaseApproved',
           source: 'innovation-sandbox',
           detail: null,
         };
@@ -241,7 +241,7 @@ describe('event-parser module', () => {
         const event = {
           version: '0',
           id: 'event-string-detail',
-          'detail-type': 'Lease Approved',
+          'detail-type': 'LeaseApproved',
           source: 'innovation-sandbox',
           detail: 'not an object',
         };
@@ -253,7 +253,7 @@ describe('event-parser module', () => {
         const event = {
           version: '0',
           id: 'event-number-detail',
-          'detail-type': 'Lease Approved',
+          'detail-type': 'LeaseApproved',
           source: 'innovation-sandbox',
           detail: 123,
         };
@@ -265,7 +265,7 @@ describe('event-parser module', () => {
         const event = {
           version: '0',
           id: 'event-array-detail',
-          'detail-type': 'Lease Approved',
+          'detail-type': 'LeaseApproved',
           source: 'innovation-sandbox',
           detail: ['item1', 'item2'],
         };
@@ -277,7 +277,7 @@ describe('event-parser module', () => {
         const event = {
           version: '0',
           id: 'event-undefined-detail',
-          'detail-type': 'Lease Approved',
+          'detail-type': 'LeaseApproved',
           source: 'innovation-sandbox',
           detail: undefined,
         };
@@ -291,7 +291,7 @@ describe('event-parser module', () => {
         const event = {
           version: '0',
           id: 'event-no-lease-id',
-          'detail-type': 'Lease Approved',
+          'detail-type': 'LeaseApproved',
           source: 'innovation-sandbox',
           detail: {
             accountId: '123456789012',
@@ -308,7 +308,7 @@ describe('event-parser module', () => {
         const event = {
           version: '0',
           id: 'event-empty-lease-id',
-          'detail-type': 'Lease Approved',
+          'detail-type': 'LeaseApproved',
           source: 'innovation-sandbox',
           detail: {
             leaseId: '',
@@ -326,7 +326,7 @@ describe('event-parser module', () => {
         const event = {
           version: '0',
           id: 'event-whitespace-lease-id',
-          'detail-type': 'Lease Approved',
+          'detail-type': 'LeaseApproved',
           source: 'innovation-sandbox',
           detail: {
             leaseId: '   ',
@@ -344,7 +344,7 @@ describe('event-parser module', () => {
         const event = {
           version: '0',
           id: 'event-number-lease-id',
-          'detail-type': 'Lease Approved',
+          'detail-type': 'LeaseApproved',
           source: 'innovation-sandbox',
           detail: {
             leaseId: 123,
@@ -362,7 +362,7 @@ describe('event-parser module', () => {
         const event = {
           version: '0',
           id: 'event-null-lease-id',
-          'detail-type': 'Lease Approved',
+          'detail-type': 'LeaseApproved',
           source: 'innovation-sandbox',
           detail: {
             leaseId: null,
@@ -380,7 +380,7 @@ describe('event-parser module', () => {
         const event = {
           version: '0',
           id: 'event-object-lease-id',
-          'detail-type': 'Lease Approved',
+          'detail-type': 'LeaseApproved',
           source: 'innovation-sandbox',
           detail: {
             leaseId: { id: 'lease-123' },
@@ -400,7 +400,7 @@ describe('event-parser module', () => {
         const event = {
           version: '0',
           id: 'event-no-account-id',
-          'detail-type': 'Lease Approved',
+          'detail-type': 'LeaseApproved',
           source: 'innovation-sandbox',
           detail: {
             leaseId: 'lease-123',
@@ -417,7 +417,7 @@ describe('event-parser module', () => {
         const event = {
           version: '0',
           id: 'event-empty-account-id',
-          'detail-type': 'Lease Approved',
+          'detail-type': 'LeaseApproved',
           source: 'innovation-sandbox',
           detail: {
             leaseId: 'lease-123',
@@ -435,7 +435,7 @@ describe('event-parser module', () => {
         const event = {
           version: '0',
           id: 'event-whitespace-account-id',
-          'detail-type': 'Lease Approved',
+          'detail-type': 'LeaseApproved',
           source: 'innovation-sandbox',
           detail: {
             leaseId: 'lease-123',
@@ -453,7 +453,7 @@ describe('event-parser module', () => {
         const event = {
           version: '0',
           id: 'event-number-account-id',
-          'detail-type': 'Lease Approved',
+          'detail-type': 'LeaseApproved',
           source: 'innovation-sandbox',
           detail: {
             leaseId: 'lease-123',
@@ -471,7 +471,7 @@ describe('event-parser module', () => {
         const event = {
           version: '0',
           id: 'event-null-account-id',
-          'detail-type': 'Lease Approved',
+          'detail-type': 'LeaseApproved',
           source: 'innovation-sandbox',
           detail: {
             leaseId: 'lease-123',
@@ -489,7 +489,7 @@ describe('event-parser module', () => {
         const event = {
           version: '0',
           id: 'event-boolean-account-id',
-          'detail-type': 'Lease Approved',
+          'detail-type': 'LeaseApproved',
           source: 'innovation-sandbox',
           detail: {
             leaseId: 'lease-123',
@@ -509,7 +509,7 @@ describe('event-parser module', () => {
         const event = {
           version: '0',
           id: 'event-no-status',
-          'detail-type': 'Lease Approved',
+          'detail-type': 'LeaseApproved',
           source: 'innovation-sandbox',
           detail: {
             leaseId: 'lease-123',
@@ -526,7 +526,7 @@ describe('event-parser module', () => {
         const event = {
           version: '0',
           id: 'event-empty-status',
-          'detail-type': 'Lease Approved',
+          'detail-type': 'LeaseApproved',
           source: 'innovation-sandbox',
           detail: {
             leaseId: 'lease-123',
@@ -544,7 +544,7 @@ describe('event-parser module', () => {
         const event = {
           version: '0',
           id: 'event-whitespace-status',
-          'detail-type': 'Lease Approved',
+          'detail-type': 'LeaseApproved',
           source: 'innovation-sandbox',
           detail: {
             leaseId: 'lease-123',
@@ -562,7 +562,7 @@ describe('event-parser module', () => {
         const event = {
           version: '0',
           id: 'event-number-status',
-          'detail-type': 'Lease Approved',
+          'detail-type': 'LeaseApproved',
           source: 'innovation-sandbox',
           detail: {
             leaseId: 'lease-123',
@@ -580,7 +580,7 @@ describe('event-parser module', () => {
         const event = {
           version: '0',
           id: 'event-null-status',
-          'detail-type': 'Lease Approved',
+          'detail-type': 'LeaseApproved',
           source: 'innovation-sandbox',
           detail: {
             leaseId: 'lease-123',
@@ -598,7 +598,7 @@ describe('event-parser module', () => {
         const event = {
           version: '0',
           id: 'event-object-status',
-          'detail-type': 'Lease Approved',
+          'detail-type': 'LeaseApproved',
           source: 'innovation-sandbox',
           detail: {
             leaseId: 'lease-123',
@@ -618,7 +618,7 @@ describe('event-parser module', () => {
         const event = {
           version: '0',
           id: 'event-undefined-template',
-          'detail-type': 'Lease Approved',
+          'detail-type': 'LeaseApproved',
           source: 'innovation-sandbox',
           detail: {
             leaseId: 'lease-123',
@@ -636,7 +636,7 @@ describe('event-parser module', () => {
         const event = {
           version: '0',
           id: 'event-null-template',
-          'detail-type': 'Lease Approved',
+          'detail-type': 'LeaseApproved',
           source: 'innovation-sandbox',
           detail: {
             leaseId: 'lease-123',
@@ -654,7 +654,7 @@ describe('event-parser module', () => {
         const event = {
           version: '0',
           id: 'event-number-template',
-          'detail-type': 'Lease Approved',
+          'detail-type': 'LeaseApproved',
           source: 'innovation-sandbox',
           detail: {
             leaseId: 'lease-123',
@@ -672,7 +672,7 @@ describe('event-parser module', () => {
         const event = {
           version: '0',
           id: 'event-boolean-template',
-          'detail-type': 'Lease Approved',
+          'detail-type': 'LeaseApproved',
           source: 'innovation-sandbox',
           detail: {
             leaseId: 'lease-123',
@@ -690,7 +690,7 @@ describe('event-parser module', () => {
         const event = {
           version: '0',
           id: 'event-object-template',
-          'detail-type': 'Lease Approved',
+          'detail-type': 'LeaseApproved',
           source: 'innovation-sandbox',
           detail: {
             leaseId: 'lease-123',

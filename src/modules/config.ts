@@ -9,7 +9,7 @@ const DEFAULTS = {
   GITHUB_PATH: 'cloudformation/scenarios',
   TARGET_ROLE_NAME: 'InnovationSandbox-ndx-DeployerRole',
   AWS_REGION: 'us-west-2',
-  EVENT_SOURCE: 'isb-deployer',
+  EVENT_SOURCE: 'innovation-sandbox',
   LOG_LEVEL: 'INFO' as LogLevel,
 } as const;
 
@@ -50,7 +50,7 @@ function getOptionalEnv(name: string, defaultValue: string): string {
  * - GITHUB_PATH: Path to templates (default: cloudformation/scenarios)
  * - TARGET_ROLE_NAME: IAM role for cross-account (default: InnovationSandbox-ndx-DeployerRole)
  * - AWS_REGION: AWS region (default: us-west-2)
- * - EVENT_SOURCE: EventBridge source (default: isb-deployer)
+ * - EVENT_SOURCE: EventBridge source (default: innovation-sandbox)
  * - LOG_LEVEL: Logging level (default: INFO)
  */
 export function loadConfig(): Config {

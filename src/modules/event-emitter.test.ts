@@ -72,13 +72,13 @@ describe('event-emitter module', () => {
       const command = mockSend.mock.calls[0][0];
       expect(command.input.Entries).toHaveLength(1);
       expect(command.input.Entries[0]).toEqual({
-        Source: 'isb-deployer',
+        Source: 'innovation-sandbox',
         DetailType: detailType,
         Detail: JSON.stringify(detail),
       });
     });
 
-    it('should use event source from config (default: isb-deployer)', async () => {
+    it('should use event source from config (default: innovation-sandbox)', async () => {
       mockSend.mockResolvedValue({
         FailedEntryCount: 0,
         Entries: [{ EventId: 'event-123' }],
@@ -87,7 +87,7 @@ describe('event-emitter module', () => {
       await emitEvent('Test Event', { test: 'data' });
 
       const command = mockSend.mock.calls[0][0];
-      expect(command.input.Entries[0].Source).toBe('isb-deployer');
+      expect(command.input.Entries[0].Source).toBe('innovation-sandbox');
     });
 
     it('should use custom event source from environment variable', async () => {

@@ -91,7 +91,7 @@ The Innovation Sandbox team who may adopt this project for long-term maintenance
 
 ---
 
-### FR-001: Receive Lease Approved Events
+### FR-001: Receive LeaseApproved Events
 
 **Priority:** Must Have
 

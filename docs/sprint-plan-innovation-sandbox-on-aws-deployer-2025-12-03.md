@@ -626,7 +626,7 @@ So that lease approvals trigger deployments
 **Acceptance Criteria:**
 - [ ] EventBridge rule resource defined
 - [ ] Filter for ISB lease approval events
-- [ ] Event pattern: source "innovation-sandbox", detail-type "Lease Approved"
+- [ ] Event pattern: source "innovation-sandbox", detail-type "LeaseApproved"
 - [ ] Target: Lambda function
 - [ ] Permission for EventBridge to invoke Lambda
 - [ ] Rule enabled by default
@@ -823,7 +823,7 @@ Velocity: 270 ÷ 2 = 135 points per sprint
 
 | FR ID | FR Name | Story | Sprint |
 |-------|---------|-------|--------|
-| FR-001 | Receive Lease Approved Events | STORY-003, STORY-004 | 1 |
+| FR-001 | Receive LeaseApproved Events | STORY-003, STORY-004 | 1 |
 | FR-002 | Extract Lease Metadata | STORY-004 | 1 |
 | FR-003 | Fetch Template from GitHub | STORY-006 | 1 |
 | FR-004 | Handle Missing Templates | STORY-007 | 1 |

@@ -4,7 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js Version](https://img.shields.io/badge/node-%3E%3D20.0.0-brightgreen)](https://nodejs.org)
 
-AWS Lambda function that automatically deploys CloudFormation templates to Innovation Sandbox sub-accounts when leases are approved. This serverless solution listens for "Lease Approved" events from EventBridge and orchestrates cross-account CloudFormation stack deployments with parameter enrichment from DynamoDB.
+AWS Lambda function that automatically deploys CloudFormation templates to Innovation Sandbox sub-accounts when leases are approved. This serverless solution listens for "LeaseApproved" events from EventBridge and orchestrates cross-account CloudFormation stack deployments with parameter enrichment from DynamoDB.
 
 ## Overview
 
@@ -78,7 +78,7 @@ This enables a fully automated, event-driven infrastructure provisioning workflo
 └─────────────────────────────────────────────────────────────────┘
 
 Event Flow:
-1. EventBridge receives "Lease Approved" event
+1. EventBridge receives "LeaseApproved" event
 2. Lambda triggered and parses event
 3. Lambda queries DynamoDB for lease details
 4. Lambda fetches CloudFormation template from GitHub raw URL
@@ -181,7 +181,7 @@ Create a test event file `test-event.json`:
 {
   "version": "0",
   "id": "12345678-1234-1234-1234-123456789012",
-  "detail-type": "Lease Approved",
+  "detail-type": "LeaseApproved",
   "source": "innovation-sandbox",
   "account": "123456789012",
   "time": "2025-12-03T10:00:00Z",
@@ -397,7 +397,7 @@ The Lambda function expects EventBridge events with the following structure:
 {
   "version": "0",
   "id": "unique-event-id",
-  "detail-type": "Lease Approved",
+  "detail-type": "LeaseApproved",
   "source": "innovation-sandbox",
   "account": "123456789012",
   "time": "2025-12-03T10:00:00Z",
@@ -457,7 +457,7 @@ The Lambda function emits deployment status events back to EventBridge:
 The CloudFormation template creates an EventBridge rule that filters for:
 
 - **Source**: Value of `EventSource` parameter (default: `innovation-sandbox`)
-- **Detail Type**: `Lease Approved`
+- **Detail Type**: `LeaseApproved`
 
 To send events from another system:
 
@@ -466,7 +466,7 @@ aws events put-events \
   --entries '[
     {
       "Source": "innovation-sandbox",
-      "DetailType": "Lease Approved",
+      "DetailType": "LeaseApproved",
       "Detail": "{\"leaseId\":\"lease-001\",\"accountId\":\"987654321098\",\"templateName\":\"ec2-instance\",\"status\":\"approved\"}"
     }
   ]'
