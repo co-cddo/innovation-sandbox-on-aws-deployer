@@ -31,3 +31,4 @@ npm-debug.log*
 
 # Lambda deployment artifacts
 *.zip
+.claude/settings.local.json
