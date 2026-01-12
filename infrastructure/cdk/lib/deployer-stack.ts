@@ -40,8 +40,8 @@ export interface DeployerStackProps extends cdk.StackProps {
   githubTokenSecretArn?: string;
   /** IAM role name to assume in target sandbox accounts */
   targetRoleName: string;
-  /** EventBridge event source for filtering events */
-  eventSource: string;
+  /** EventBridge event bus name (defaults to ISB event bus) */
+  eventBusName?: string;
 }
 
 /**
@@ -70,7 +70,7 @@ export class DeployerStack extends cdk.Stack {
       githubPath,
       githubTokenSecretArn,
       targetRoleName,
-      eventSource,
+      eventBusName = 'InnovationSandboxComputeISBEventBus6697FE33',
     } = props;
 
     const isProd = environment === 'prod';
@@ -216,19 +216,19 @@ export class DeployerStack extends cdk.Stack {
         GITHUB_BRANCH: githubBranch,
         GITHUB_PATH: githubPath,
         TARGET_ROLE_NAME: targetRoleName,
-        EVENT_SOURCE: eventSource,
+        EVENT_SOURCE: 'innovation-sandbox', // Used for emitting events back
         LOG_LEVEL: isProd ? 'INFO' : 'DEBUG',
         ...(githubTokenSecretArn && { GITHUB_TOKEN_SECRET_ARN: githubTokenSecretArn }),
       },
     });
 
-    // EventBridge Rule for LeaseApproved events
-    // Filter by both source and detail-type to only process events from ISB
+    // EventBridge Rule for LeaseApproved events on ISB event bus
+    const eventBus = events.EventBus.fromEventBusName(this, 'ISBEventBus', eventBusName);
     this.eventRule = new events.Rule(this, 'LeaseApprovedRule', {
       ruleName: `isb-deployer-lease-approved-${environment}`,
-      description: `Triggers deployment when a lease is approved from ${eventSource}`,
+      description: 'Triggers deployment when a lease is approved',
+      eventBus,
       eventPattern: {
-        source: [eventSource],
         detailType: ['LeaseApproved'],
       },
     });

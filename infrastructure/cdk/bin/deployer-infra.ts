@@ -18,39 +18,17 @@ import { GitHubOidcStack } from '../lib/github-oidc-stack.js';
 const app = new cdk.App();
 
 // Get context values with defaults
-const environment = app.node.tryGetContext('environment') || 'dev';
 const imageTag = app.node.tryGetContext('imageTag') || 'latest';
 
-// Configuration based on environment
+// Production configuration - deployer runs in us-west-2, deploys to us-east-1
 const config = {
-  dev: {
-    leaseTableName: 'ndx-try-isb-data-LeaseTable473C6DF2-1RC3238PVASE1',
-    leaseTableRegion: 'us-west-2',
-    githubRepo: 'co-cddo/ndx_try_aws_scenarios',
-    githubBranch: 'main',
-    githubPath: 'cloudformation/scenarios',
-    githubTokenSecretArn: 'arn:aws:secretsmanager:us-east-1:568672915267:secret:isb-deployer/github-token-pAKbvA',
-    targetRoleName: 'InnovationSandbox-ndx-DeployerRole',
-    eventSource: 'sandbox.leasing',
-  },
-  prod: {
-    leaseTableName: 'ndx-try-isb-data-LeaseTable473C6DF2-1RC3238PVASE1',
-    leaseTableRegion: 'us-west-2',
-    githubRepo: 'co-cddo/ndx_try_aws_scenarios',
-    githubBranch: 'main',
-    githubPath: 'cloudformation/scenarios',
-    githubTokenSecretArn: 'arn:aws:secretsmanager:us-east-1:568672915267:secret:isb-deployer/github-token-pAKbvA',
-    targetRoleName: 'InnovationSandbox-ndx-DeployerRole',
-    eventSource: 'sandbox.leasing',
-  },
-}[environment as 'dev' | 'prod'] || {
   leaseTableName: 'ndx-try-isb-data-LeaseTable473C6DF2-1RC3238PVASE1',
   leaseTableRegion: 'us-west-2',
   githubRepo: 'co-cddo/ndx_try_aws_scenarios',
   githubBranch: 'main',
   githubPath: 'cloudformation/scenarios',
+  githubTokenSecretArn: 'arn:aws:secretsmanager:us-west-2:568672915267:secret:isb-deployer/github-token-NZqylu',
   targetRoleName: 'InnovationSandbox-ndx-DeployerRole',
-  eventSource: 'sandbox.leasing',
 };
 
 // Common stack props - Lambda runs in us-west-2 where ISB is deployed
@@ -62,7 +40,6 @@ const stackProps: cdk.StackProps = {
   },
   tags: {
     Application: 'innovation-sandbox-deployer',
-    Environment: environment,
     ManagedBy: 'CDK',
   },
 };
@@ -75,15 +52,15 @@ new GitHubOidcStack(app, 'GitHubOidcStack', {
   githubOrg: 'co-cddo',
   githubRepo: 'innovation-sandbox-on-aws-deployer',
   githubBranch: 'main',
-  environment,
+  environment: 'prod',
 });
 
 // Deployer Stack (deploy on each push to main)
 new DeployerStack(app, 'DeployerStack', {
   ...stackProps,
-  stackName: `isb-deployer-${environment}`,
+  stackName: 'isb-deployer-prod',
   description: 'Innovation Sandbox Deployer Lambda and EventBridge infrastructure',
-  environment,
+  environment: 'prod',
   imageTag,
   leaseTableName: config.leaseTableName,
   leaseTableRegion: config.leaseTableRegion,
@@ -92,7 +69,6 @@ new DeployerStack(app, 'DeployerStack', {
   githubPath: config.githubPath,
   githubTokenSecretArn: config.githubTokenSecretArn,
   targetRoleName: config.targetRoleName,
-  eventSource: config.eventSource,
 });
 
 app.synth();
