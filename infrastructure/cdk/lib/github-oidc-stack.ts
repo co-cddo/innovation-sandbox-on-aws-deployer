@@ -92,6 +92,7 @@ export class GitHubOidcStack extends cdk.Stack {
           'cloudformation:DescribeStacks',
           'cloudformation:DescribeStackEvents',
           'cloudformation:DescribeStackResources',
+          'cloudformation:DescribeEvents',
           'cloudformation:GetTemplate',
           'cloudformation:GetTemplateSummary',
           'cloudformation:ValidateTemplate',
@@ -272,6 +273,9 @@ export class GitHubOidcStack extends cdk.Stack {
         resources: [
           `arn:aws:events:${cdk.Aws.REGION}:${cdk.Aws.ACCOUNT_ID}:rule/isb-deployer*`,
           `arn:aws:events:${cdk.Aws.REGION}:${cdk.Aws.ACCOUNT_ID}:event-bus/default`,
+          // ISB event bus - required for rules listening to LeaseApproved events
+          `arn:aws:events:${cdk.Aws.REGION}:${cdk.Aws.ACCOUNT_ID}:event-bus/InnovationSandbox*`,
+          `arn:aws:events:${cdk.Aws.REGION}:${cdk.Aws.ACCOUNT_ID}:rule/InnovationSandbox*/isb-deployer*`,
         ],
       })
     );
