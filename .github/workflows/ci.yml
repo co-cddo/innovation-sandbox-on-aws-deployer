@@ -183,7 +183,7 @@ jobs:
       - name: Tag and push image to ECR
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: isb-deployer-dev
+          ECR_REPOSITORY: isb-deployer-prod
           IMAGE_TAG: ${{ github.sha }}
         run: |
           # Tag for ECR with SHA and latest
@@ -210,26 +210,25 @@ jobs:
 
       - name: CDK Diff
         working-directory: infrastructure/cdk
-        run: npx cdk diff DeployerStack -c imageTag=${{ github.sha }} -c environment=dev || true
+        run: npx cdk diff DeployerStack -c imageTag=${{ github.sha }} || true
 
       - name: Deploy CDK Stack
         working-directory: infrastructure/cdk
         run: |
           npx cdk deploy DeployerStack \
             --require-approval never \
-            -c imageTag=${{ github.sha }} \
-            -c environment=dev
+            -c imageTag=${{ github.sha }}
 
       - name: Wait for Lambda update
         run: |
           aws lambda wait function-updated-v2 \
-            --function-name isb-deployer-dev
+            --function-name isb-deployer-prod
 
       - name: Deployment summary
         run: |
           echo "### Deployment Complete! :rocket:" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "- **Function:** isb-deployer-dev" >> $GITHUB_STEP_SUMMARY
+          echo "- **Function:** isb-deployer-prod" >> $GITHUB_STEP_SUMMARY
           echo "- **Image Tag:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Region:** ${{ env.AWS_REGION }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **CDK Stack:** isb-deployer-dev" >> $GITHUB_STEP_SUMMARY
+          echo "- **CDK Stack:** isb-deployer-prod" >> $GITHUB_STEP_SUMMARY
