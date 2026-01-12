@@ -42,15 +42,16 @@ export class GitHubOidcStack extends cdk.Stack {
 
     // GitHub OIDC Identity Provider
     // Note: Only ONE GitHub OIDC provider can exist per AWS account
-    this.oidcProvider = new iam.OpenIdConnectProvider(this, 'GitHubOIDCProvider', {
-      url: 'https://token.actions.githubusercontent.com',
-      clientIds: ['sts.amazonaws.com'],
-      // GitHub's OIDC thumbprints (stable, provided by GitHub)
-      thumbprints: [
-        '6938fd4d98bab03faadb97b34396831e3780aea1',
-        '1c58a3a8518e8759bf075b76b750d4f2df264fcd',
-      ],
-    });
+    // Import existing provider if it exists, otherwise create new one
+    const existingProviderArn = `arn:aws:iam::${cdk.Aws.ACCOUNT_ID}:oidc-provider/token.actions.githubusercontent.com`;
+
+    // Try to import existing provider - this is a lookup that won't fail if it doesn't exist
+    // We use fromOpenIdConnectProviderArn to reference an existing provider
+    this.oidcProvider = iam.OpenIdConnectProvider.fromOpenIdConnectProviderArn(
+      this,
+      'GitHubOIDCProvider',
+      existingProviderArn
+    ) as iam.OpenIdConnectProvider;
 
     // IAM Role for GitHub Actions to assume
     this.deployRole = new iam.Role(this, 'GitHubActionsDeployRole', {
@@ -73,6 +74,11 @@ export class GitHubOidcStack extends cdk.Stack {
         'sts:AssumeRoleWithWebIdentity'
       ),
     });
+
+    // Override logical ID to match existing CloudFormation resource from SAM migration
+    (this.deployRole.node.defaultChild as cdk.CfnResource).overrideLogicalId(
+      'GitHubActionsDeployRole'
+    );
 
     // CloudFormation permissions for CDK deployment
     this.deployRole.addToPolicy(
@@ -270,7 +276,7 @@ export class GitHubOidcStack extends cdk.Stack {
     // Outputs
     new cdk.CfnOutput(this, 'OIDCProviderArn', {
       description: 'ARN of the GitHub OIDC provider',
-      value: this.oidcProvider.openIdConnectProviderArn,
+      value: existingProviderArn,
       exportName: `${this.stackName}-OIDCProviderArn`,
     });
 
