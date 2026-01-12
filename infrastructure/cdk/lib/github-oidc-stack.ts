@@ -120,6 +120,25 @@ export class GitHubOidcStack extends cdk.Stack {
       })
     );
 
+    // S3 permissions for CDK bootstrap assets bucket
+    this.deployRole.addToPolicy(
+      new iam.PolicyStatement({
+        sid: 'S3CDKAssetsBucket',
+        effect: iam.Effect.ALLOW,
+        actions: [
+          's3:GetObject',
+          's3:PutObject',
+          's3:DeleteObject',
+          's3:ListBucket',
+          's3:GetBucketLocation',
+        ],
+        resources: [
+          `arn:aws:s3:::cdk-hnb659fds-assets-${cdk.Aws.ACCOUNT_ID}-${cdk.Aws.REGION}`,
+          `arn:aws:s3:::cdk-hnb659fds-assets-${cdk.Aws.ACCOUNT_ID}-${cdk.Aws.REGION}/*`,
+        ],
+      })
+    );
+
     // ECR permissions for pushing container images
     this.deployRole.addToPolicy(
       new iam.PolicyStatement({
@@ -209,6 +228,18 @@ export class GitHubOidcStack extends cdk.Stack {
           'iam:ListAttachedRolePolicies',
         ],
         resources: [`arn:aws:iam::${cdk.Aws.ACCOUNT_ID}:role/isb-deployer*`],
+      })
+    );
+
+    // PassRole permission for CDK bootstrap execution role
+    this.deployRole.addToPolicy(
+      new iam.PolicyStatement({
+        sid: 'CDKPassRole',
+        effect: iam.Effect.ALLOW,
+        actions: ['iam:PassRole'],
+        resources: [
+          `arn:aws:iam::${cdk.Aws.ACCOUNT_ID}:role/cdk-hnb659fds-cfn-exec-role-${cdk.Aws.ACCOUNT_ID}-${cdk.Aws.REGION}`,
+        ],
       })
     );
 
