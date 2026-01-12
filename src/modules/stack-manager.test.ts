@@ -479,9 +479,15 @@ describe('stack-manager', () => {
     it('should delete and recreate stack for ROLLBACK_COMPLETE status', async () => {
       const mockStackId = 'arn:aws:cloudformation:us-west-2:123456789012:stack/test-stack/abc123';
       const newStackId = 'arn:aws:cloudformation:us-west-2:123456789012:stack/test-stack/def456';
+      const stackNotExistError = Object.assign(
+        new Error('Stack with id test-stack does not exist'),
+        { name: 'ValidationError' }
+      );
 
       // First call: describe stack (ROLLBACK_COMPLETE)
       // Second call: delete stack
+      // Third call: describe stack during poll (stack doesn't exist - deletion complete)
+      // Fourth call: final status check (stack doesn't exist)
       mockSend
         .mockResolvedValueOnce({
           Stacks: [
@@ -492,7 +498,9 @@ describe('stack-manager', () => {
             },
           ],
         })
-        .mockResolvedValueOnce({}); // DeleteStack response
+        .mockResolvedValueOnce({}) // DeleteStack response
+        .mockRejectedValueOnce(stackNotExistError) // First poll: stack doesn't exist
+        .mockRejectedValueOnce(stackNotExistError); // Final status check: stack doesn't exist
 
       mockDeployStack.mockResolvedValue({
         stackId: newStackId,
@@ -800,6 +808,10 @@ describe('stack-manager', () => {
 
     it('should use correct credentials and us-east-1 region for delete operation', async () => {
       const mockStackId = 'arn:aws:cloudformation:us-east-1:123456789012:stack/test-stack/abc123';
+      const stackNotExistError = Object.assign(
+        new Error('Stack with id test-stack does not exist'),
+        { name: 'ValidationError' }
+      );
 
       mockSend
         .mockResolvedValueOnce({
@@ -811,7 +823,9 @@ describe('stack-manager', () => {
             },
           ],
         })
-        .mockResolvedValueOnce({});
+        .mockResolvedValueOnce({}) // DeleteStack response
+        .mockRejectedValueOnce(stackNotExistError) // First poll: stack doesn't exist
+        .mockRejectedValueOnce(stackNotExistError); // Final status check: stack doesn't exist
 
       mockDeployStack.mockResolvedValue({
         stackId: 'new-stack-id',

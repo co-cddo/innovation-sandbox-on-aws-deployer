@@ -2,12 +2,18 @@
  * Template Handler Module
  *
  * Handles template availability checking and graceful handling of missing templates.
+ * Supports both CloudFormation templates and CDK scenarios.
  * Missing templates are expected behavior (users without scenarios get empty accounts)
  * and are NOT treated as errors.
  */
 
-import { fetchTemplate, TemplateFetchError } from './template-fetcher.js';
-import { buildTemplateUrl } from './github-url.js';
+import {
+  resolveTemplate,
+  TemplateResolutionError,
+  GitHubApiError,
+  CdkSynthesisError,
+} from './template-resolver.js';
+import { getConfigAsync } from './config.js';
 import type { Logger } from './logger.js';
 
 /**
@@ -20,12 +26,21 @@ export interface TemplateHandleResult {
   template?: string;
   /** Reason for skipping (for logging/observability) */
   reason?: string;
+  /** Source of the template: 'cdk' or 'cloudformation' */
+  source?: 'cdk' | 'cloudformation';
+  /** Whether the template was synthesized (CDK only) */
+  synthesized?: boolean;
 }
 
 /**
  * Handles template retrieval with graceful handling for missing templates
  *
- * This function checks if a template name is provided and attempts to fetch it.
+ * This function checks if a template name is provided and attempts to resolve it.
+ * It automatically detects whether the scenario is CDK or CloudFormation and handles
+ * each appropriately:
+ * - CloudFormation: Fetches the template.yaml directly
+ * - CDK: Fetches the scenario folder, runs synthesis, and returns the generated template
+ *
  * Missing templates (undefined templateName or 404 from GitHub) are treated as
  * expected behavior, not errors. This allows users without scenarios to get
  * empty accounts (existing ISB behavior).
@@ -33,22 +48,27 @@ export interface TemplateHandleResult {
  * @param templateName - Optional template name from the lease event
  * @param leaseId - Lease ID for logging correlation
  * @param logger - Logger instance for structured logging
+ * @param targetAccountId - Optional target AWS account for CDK synthesis context
+ * @param targetRegion - Optional target AWS region for CDK synthesis context
  * @returns Promise resolving to a result indicating whether to skip deployment
  *
  * @example
  * ```typescript
- * const result = await handleTemplate(templateName, leaseId, logger);
+ * const result = await handleTemplate(templateName, leaseId, logger, accountId);
  * if (result.skip) {
  *   logger.info('Skipping deployment', { reason: result.reason });
  *   return;
  * }
  * // Proceed with deployment using result.template
+ * console.log(`Template from: ${result.source}, synthesized: ${result.synthesized}`);
  * ```
  */
 export async function handleTemplate(
   templateName: string | undefined,
   leaseId: string,
-  logger: Logger
+  logger: Logger,
+  targetAccountId?: string,
+  targetRegion?: string
 ): Promise<TemplateHandleResult> {
   // Set logging context
   logger.setContext({ correlationId: leaseId });
@@ -67,32 +87,28 @@ export async function handleTemplate(
     };
   }
 
-  // Template name is provided, attempt to fetch it
+  // Template name is provided, attempt to resolve it
   try {
-    const url = buildTemplateUrl(templateName);
-    logger.debug('Fetching template from GitHub', {
+    logger.debug('Resolving template', {
       event: 'FETCH',
       leaseId,
       templateName,
-      url,
     });
 
-    const template = await fetchTemplate(url);
+    // Get config with GitHub token
+    const config = await getConfigAsync();
 
-    logger.info('Template fetched successfully', {
-      event: 'FETCH',
-      leaseId,
+    // Resolve the template (handles both CDK and CloudFormation)
+    const resolved = await resolveTemplate(
       templateName,
-      templateSize: template.length,
-    });
+      logger,
+      targetAccountId,
+      targetRegion,
+      config
+    );
 
-    return {
-      skip: false,
-      template,
-    };
-  } catch (error) {
-    // Handle 404 as graceful no-op (expected behavior)
-    if (error instanceof TemplateFetchError && error.statusCode === 404) {
+    // Handle not found
+    if (!resolved) {
       logger.info('Template not found in repository, skipping deployment', {
         event: 'FETCH',
         leaseId,
@@ -106,15 +122,69 @@ export async function handleTemplate(
       };
     }
 
-    // Other errors (network issues, timeouts, 500s, etc.) should be re-thrown
-    // These are actual errors that should be handled by the caller
-    logger.error('Error fetching template', {
+    logger.info('Template resolved successfully', {
       event: 'FETCH',
       leaseId,
       templateName,
-      error: error instanceof Error ? error.message : String(error),
-      errorType: error instanceof TemplateFetchError ? 'TemplateFetchError' : 'UnknownError',
-      statusCode: error instanceof TemplateFetchError ? error.statusCode : undefined,
+      templateSize: resolved.templateBody.length,
+      source: resolved.source,
+      synthesized: resolved.synthesized,
+    });
+
+    return {
+      skip: false,
+      template: resolved.templateBody,
+      source: resolved.source,
+      synthesized: resolved.synthesized,
+    };
+  } catch (error) {
+    // Handle GitHub rate limiting specially
+    if (error instanceof GitHubApiError && error.message.includes('rate limit')) {
+      logger.error('GitHub rate limit exceeded', {
+        event: 'FETCH',
+        leaseId,
+        templateName,
+        error: error.message,
+      });
+      throw error;
+    }
+
+    // Handle CDK synthesis errors
+    if (error instanceof CdkSynthesisError) {
+      logger.error('CDK synthesis failed', {
+        event: 'FETCH',
+        leaseId,
+        templateName,
+        error: error.message,
+        stderr: error.stderr,
+      });
+      throw error;
+    }
+
+    // Handle other resolution errors - preserve full error chain
+    if (error instanceof TemplateResolutionError) {
+      logger.error('Template resolution failed', {
+        event: 'FETCH',
+        leaseId,
+        templateName,
+        error: error.message,
+        // Preserve cause chain for debugging
+        cause: error.cause?.message,
+        causeType: error.cause?.name,
+      });
+      throw error;
+    }
+
+    // Log and re-throw unexpected errors with full context
+    const errorObj = error instanceof Error ? error : new Error(String(error));
+    logger.error('Unexpected error resolving template', {
+      event: 'FETCH',
+      leaseId,
+      templateName,
+      error: errorObj.message,
+      errorType: errorObj.name,
+      // Include stack trace for debugging
+      stack: errorObj.stack?.split('\n').slice(0, 5).join('\n'),
     });
 
     throw error;

@@ -7,10 +7,66 @@ import { deployStack, type DeployStackInput } from './stack-deployer.js';
 import type { AssumedRoleCredentials } from './role-assumer.js';
 import { DEFAULTS } from './config.js';
 
+/** Maximum time to wait for stack deletion before timeout (2 minutes) */
+const DELETE_WAIT_TIMEOUT_MS = 120_000;
+
+/** Interval between stack deletion status checks (3 seconds) */
+const DELETE_POLL_INTERVAL_MS = 3_000;
+
 /**
- * Custom error class for stack management failures
+ * Creates a CloudFormation client configured for the deploy region with assumed role credentials.
+ *
+ * This factory ensures consistent client configuration across all stack operations.
+ * Each call creates a fresh client instance - do NOT cache or reuse as credentials may differ.
+ *
+ * @param credentials - Assumed role credentials for the target AWS account
+ * @returns Configured CloudFormation client
+ */
+function createCloudFormationClient(credentials: AssumedRoleCredentials): CloudFormationClient {
+  return new CloudFormationClient({
+    region: DEFAULTS.DEPLOY_REGION,
+    credentials: {
+      accessKeyId: credentials.accessKeyId,
+      secretAccessKey: credentials.secretAccessKey,
+      sessionToken: credentials.sessionToken,
+    },
+  });
+}
+
+/**
+ * Error thrown when CloudFormation stack management operations fail.
+ *
+ * This error wraps failures from stack status checks, deployments, updates,
+ * and deletions. It preserves the original AWS SDK error for debugging.
+ *
+ * Common causes include:
+ * - Stack does not exist when expected
+ * - Insufficient IAM permissions in target account
+ * - Stack is in an unrecoverable state (DELETE_FAILED)
+ * - Timeout waiting for stack operations to complete
+ * - Invalid CloudFormation template
+ *
+ * @example
+ * ```typescript
+ * try {
+ *   const result = await deployOrUpdateStack(input);
+ * } catch (error) {
+ *   if (error instanceof StackManagementError) {
+ *     console.error('Stack operation failed:', error.message);
+ *     if (error.originalError) {
+ *       console.error('Original error:', error.originalError);
+ *     }
+ *   }
+ * }
+ * ```
  */
 export class StackManagementError extends Error {
+  /**
+   * Creates a new StackManagementError.
+   *
+   * @param message - Human-readable description of the stack operation failure
+   * @param originalError - Optional underlying error from AWS SDK or other source
+   */
   constructor(
     message: string,
     public readonly originalError?: unknown
@@ -120,16 +176,7 @@ export async function getStackStatus(
   credentials: AssumedRoleCredentials
 ): Promise<StackStatusResult> {
   // Create CloudFormation client with assumed role credentials
-  // Note: Do NOT use singleton pattern here - create fresh client per call with specific credentials
-  // Query stacks in us-east-1 where they are deployed
-  const client = new CloudFormationClient({
-    region: DEFAULTS.DEPLOY_REGION,
-    credentials: {
-      accessKeyId: credentials.accessKeyId,
-      secretAccessKey: credentials.secretAccessKey,
-      sessionToken: credentials.sessionToken,
-    },
-  });
+  const client = createCloudFormationClient(credentials);
 
   try {
     const command = new DescribeStacksCommand({
@@ -272,23 +319,53 @@ export async function deployOrUpdateStack(input: DeployStackInput): Promise<Stac
   if (status === StackStatus.ROLLBACK_COMPLETE) {
     console.log(`Stack '${stackName}' is in ${status} state. Deleting stack before recreating...`);
 
-    // Delete the stack (in us-east-1 where stacks are deployed)
-    const client = new CloudFormationClient({
-      region: DEFAULTS.DEPLOY_REGION,
-      credentials: {
-        accessKeyId: credentials.accessKeyId,
-        secretAccessKey: credentials.secretAccessKey,
-        sessionToken: credentials.sessionToken,
-      },
-    });
+    // Delete the stack using shared client factory
+    const client = createCloudFormationClient(credentials);
 
     try {
       const deleteCommand = new DeleteStackCommand({
         StackName: stackName,
       });
       await client.send(deleteCommand);
-      console.log(`Stack '${stackName}' deletion initiated. Creating new stack...`);
+      console.log(`Stack '${stackName}' deletion initiated. Waiting for deletion to complete...`);
+
+      // Wait for stack deletion to complete before creating new stack
+      // CloudFormation won't allow creating a stack with the same name while delete is in progress
+      const startTime = Date.now();
+
+      while (Date.now() - startTime < DELETE_WAIT_TIMEOUT_MS) {
+        await new Promise((resolve) => setTimeout(resolve, DELETE_POLL_INTERVAL_MS));
+
+        const currentStatus = await getStackStatus(stackName, credentials);
+
+        // Stack is fully deleted (doesn't exist anymore)
+        if (!currentStatus.exists) {
+          console.log(`Stack '${stackName}' deletion complete. Creating new stack...`);
+          break;
+        }
+
+        // Stack deletion failed
+        if (currentStatus.status === StackStatus.DELETE_FAILED) {
+          throw new StackManagementError(
+            `Stack '${stackName}' deletion failed. Cannot recreate stack.`
+          );
+        }
+
+        // Still deleting, continue waiting
+        console.log(`Stack '${stackName}' still deleting (${currentStatus.status})...`);
+      }
+
+      // Check if we timed out
+      const finalStatus = await getStackStatus(stackName, credentials);
+      if (finalStatus.exists && finalStatus.status !== StackStatus.DELETE_COMPLETE) {
+        throw new StackManagementError(
+          `Timeout waiting for stack '${stackName}' deletion. Current status: ${finalStatus.status}`
+        );
+      }
     } catch (error) {
+      if (error instanceof StackManagementError) {
+        throw error;
+      }
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       throw new StackManagementError(
         `Failed to delete stack '${stackName}' in ROLLBACK_COMPLETE state: ${errorMessage}`,

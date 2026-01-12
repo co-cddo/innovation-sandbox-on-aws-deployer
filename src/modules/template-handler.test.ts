@@ -1,9 +1,41 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { handleTemplate } from './template-handler.js';
 import { Logger } from './logger.js';
-import { TemplateFetchError } from './template-fetcher.js';
-import * as templateFetcher from './template-fetcher.js';
-import * as githubUrl from './github-url.js';
+import * as templateResolver from './template-resolver.js';
+import * as configModule from './config.js';
+
+// Mock the modules
+vi.mock('./template-resolver.js', () => ({
+  resolveTemplate: vi.fn(),
+  TemplateResolutionError: class extends Error {
+    constructor(message: string) {
+      super(message);
+      this.name = 'TemplateResolutionError';
+    }
+  },
+  GitHubApiError: class extends Error {
+    statusCode?: number;
+    constructor(message: string, statusCode?: number) {
+      super(message);
+      this.name = 'GitHubApiError';
+      this.statusCode = statusCode;
+    }
+  },
+  CdkSynthesisError: class extends Error {
+    stderr?: string;
+    constructor(message: string, cause?: Error, stderr?: string) {
+      super(message);
+      this.name = 'CdkSynthesisError';
+      this.stderr = stderr;
+    }
+  },
+}));
+
+vi.mock('./config.js', () => ({
+  getConfigAsync: vi.fn(),
+  getConfig: vi.fn(),
+  resetConfig: vi.fn(),
+}));
 
 describe('template-handler module', () => {
   let logger: Logger;
@@ -12,12 +44,31 @@ describe('template-handler module', () => {
   let loggerErrorSpy: ReturnType<typeof vi.spyOn>;
   let loggerSetContextSpy: ReturnType<typeof vi.spyOn>;
 
+  const mockConfig = {
+    githubRepo: 'test/repo',
+    githubBranch: 'main',
+    githubPath: 'scenarios',
+    leaseTableName: 'test-table',
+    targetRoleName: 'TestRole',
+    awsRegion: 'us-east-1',
+    eventSource: 'test-source',
+    logLevel: 'DEBUG' as const,
+    githubToken: 'test-token',
+  };
+
   beforeEach(() => {
     logger = new Logger('DEBUG');
     loggerInfoSpy = vi.spyOn(logger, 'info');
     loggerDebugSpy = vi.spyOn(logger, 'debug');
     loggerErrorSpy = vi.spyOn(logger, 'error');
     loggerSetContextSpy = vi.spyOn(logger, 'setContext');
+
+    // Setup default mock
+    vi.mocked(configModule.getConfigAsync).mockResolvedValue(mockConfig);
+  });
+
+  afterEach(() => {
+    vi.resetAllMocks();
   });
 
   describe('handleTemplate', () => {
@@ -78,7 +129,7 @@ describe('template-handler module', () => {
       });
     });
 
-    describe('when template exists and is fetched successfully', () => {
+    describe('when CloudFormation template exists and is fetched successfully', () => {
       it('should return template content and not skip deployment', async () => {
         const mockTemplate = `AWSTemplateFormatVersion: '2010-09-09'
 Description: Test template
@@ -86,46 +137,80 @@ Resources:
   MyBucket:
     Type: AWS::S3::Bucket`;
 
-        const mockUrl = 'https://raw.githubusercontent.com/test/repo/main/template.yaml';
-
-        vi.spyOn(githubUrl, 'buildTemplateUrl').mockReturnValue(mockUrl);
-        vi.spyOn(templateFetcher, 'fetchTemplate').mockResolvedValue(mockTemplate);
+        vi.mocked(templateResolver.resolveTemplate).mockResolvedValue({
+          templateBody: mockTemplate,
+          source: 'cloudformation',
+          synthesized: false,
+        });
 
         const result = await handleTemplate('test-template', 'lease-abc', logger);
 
         expect(result.skip).toBe(false);
         expect(result.template).toBe(mockTemplate);
+        expect(result.source).toBe('cloudformation');
+        expect(result.synthesized).toBe(false);
         expect(result.reason).toBeUndefined();
 
         expect(loggerDebugSpy).toHaveBeenCalledWith(
-          'Fetching template from GitHub',
+          'Resolving template',
           expect.objectContaining({
             event: 'FETCH',
             leaseId: 'lease-abc',
             templateName: 'test-template',
-            url: mockUrl,
           })
         );
 
         expect(loggerInfoSpy).toHaveBeenCalledWith(
-          'Template fetched successfully',
+          'Template resolved successfully',
           expect.objectContaining({
             event: 'FETCH',
             leaseId: 'lease-abc',
             templateName: 'test-template',
             templateSize: mockTemplate.length,
+            source: 'cloudformation',
+            synthesized: false,
           })
         );
       });
     });
 
-    describe('when template fetch returns 404', () => {
-      it('should skip deployment gracefully and log as info (not error)', async () => {
-        const mockUrl = 'https://raw.githubusercontent.com/test/repo/main/missing.yaml';
-        const notFoundError = new TemplateFetchError('HTTP 404: Not Found', 404, mockUrl);
+    describe('when CDK template is synthesized successfully', () => {
+      it('should return synthesized template and indicate CDK source', async () => {
+        const mockTemplate = '{"AWSTemplateFormatVersion":"2010-09-09","Resources":{}}';
 
-        vi.spyOn(githubUrl, 'buildTemplateUrl').mockReturnValue(mockUrl);
-        vi.spyOn(templateFetcher, 'fetchTemplate').mockRejectedValue(notFoundError);
+        vi.mocked(templateResolver.resolveTemplate).mockResolvedValue({
+          templateBody: mockTemplate,
+          source: 'cdk',
+          synthesized: true,
+        });
+
+        const result = await handleTemplate(
+          'cdk-scenario',
+          'lease-cdk',
+          logger,
+          '123456789012',
+          'us-east-1'
+        );
+
+        expect(result.skip).toBe(false);
+        expect(result.template).toBe(mockTemplate);
+        expect(result.source).toBe('cdk');
+        expect(result.synthesized).toBe(true);
+
+        // Verify resolveTemplate was called with correct params
+        expect(templateResolver.resolveTemplate).toHaveBeenCalledWith(
+          'cdk-scenario',
+          logger,
+          '123456789012',
+          'us-east-1',
+          mockConfig
+        );
+      });
+    });
+
+    describe('when template is not found (returns null)', () => {
+      it('should skip deployment gracefully and log as info', async () => {
+        vi.mocked(templateResolver.resolveTemplate).mockResolvedValue(null);
 
         const result = await handleTemplate('missing-template', 'lease-def', logger);
 
@@ -143,177 +228,104 @@ Resources:
           })
         );
 
-        // Should NOT log an error for 404
+        // Should NOT log an error for not found
         expect(loggerErrorSpy).not.toHaveBeenCalled();
       });
     });
 
-    describe('when template fetch fails with 500 error', () => {
-      it('should throw error and log as error', async () => {
-        const mockUrl = 'https://raw.githubusercontent.com/test/repo/main/template.yaml';
-        const serverError = new TemplateFetchError('HTTP 500: Internal Server Error', 500, mockUrl);
+    describe('when GitHub rate limit is exceeded', () => {
+      it('should throw error and log appropriately', async () => {
+        const rateLimitError = new templateResolver.GitHubApiError(
+          'GitHub API rate limit exceeded',
+          403
+        );
 
-        vi.spyOn(githubUrl, 'buildTemplateUrl').mockReturnValue(mockUrl);
-        vi.spyOn(templateFetcher, 'fetchTemplate').mockRejectedValue(serverError);
+        vi.mocked(templateResolver.resolveTemplate).mockRejectedValue(rateLimitError);
 
-        await expect(handleTemplate('error-template', 'lease-ghi', logger)).rejects.toThrow(
-          TemplateFetchError
+        await expect(handleTemplate('rate-limited', 'lease-rate', logger)).rejects.toThrow(
+          templateResolver.GitHubApiError
         );
 
         expect(loggerErrorSpy).toHaveBeenCalledWith(
-          'Error fetching template',
+          'GitHub rate limit exceeded',
           expect.objectContaining({
             event: 'FETCH',
-            leaseId: 'lease-ghi',
+            leaseId: 'lease-rate',
+            templateName: 'rate-limited',
+          })
+        );
+      });
+    });
+
+    describe('when CDK synthesis fails', () => {
+      it('should throw error and log with stderr', async () => {
+        const synthesisError = new templateResolver.CdkSynthesisError(
+          'CDK synthesis failed',
+          undefined,
+          'npm ERR! missing dependencies'
+        );
+
+        vi.mocked(templateResolver.resolveTemplate).mockRejectedValue(synthesisError);
+
+        await expect(handleTemplate('cdk-error', 'lease-synth', logger)).rejects.toThrow(
+          templateResolver.CdkSynthesisError
+        );
+
+        expect(loggerErrorSpy).toHaveBeenCalledWith(
+          'CDK synthesis failed',
+          expect.objectContaining({
+            event: 'FETCH',
+            leaseId: 'lease-synth',
+            templateName: 'cdk-error',
+            stderr: 'npm ERR! missing dependencies',
+          })
+        );
+      });
+    });
+
+    describe('when template resolution fails with generic error', () => {
+      it('should throw and log as resolution error', async () => {
+        const resolutionError = new templateResolver.TemplateResolutionError(
+          'Failed to resolve template'
+        );
+
+        vi.mocked(templateResolver.resolveTemplate).mockRejectedValue(resolutionError);
+
+        await expect(handleTemplate('error-template', 'lease-res', logger)).rejects.toThrow(
+          templateResolver.TemplateResolutionError
+        );
+
+        expect(loggerErrorSpy).toHaveBeenCalledWith(
+          'Template resolution failed',
+          expect.objectContaining({
+            event: 'FETCH',
+            leaseId: 'lease-res',
             templateName: 'error-template',
-            error: 'HTTP 500: Internal Server Error',
-            errorType: 'TemplateFetchError',
-            statusCode: 500,
           })
         );
       });
     });
 
-    describe('when template fetch fails with 403 error', () => {
-      it('should throw error and log as error', async () => {
-        const mockUrl = 'https://raw.githubusercontent.com/test/repo/main/template.yaml';
-        const forbiddenError = new TemplateFetchError('HTTP 403: Forbidden', 403, mockUrl);
+    describe('when unexpected error occurs', () => {
+      it('should log and rethrow', async () => {
+        const unexpectedError = new Error('Something unexpected');
 
-        vi.spyOn(githubUrl, 'buildTemplateUrl').mockReturnValue(mockUrl);
-        vi.spyOn(templateFetcher, 'fetchTemplate').mockRejectedValue(forbiddenError);
+        vi.mocked(templateResolver.resolveTemplate).mockRejectedValue(unexpectedError);
 
-        await expect(handleTemplate('forbidden-template', 'lease-jkl', logger)).rejects.toThrow(
-          TemplateFetchError
+        await expect(handleTemplate('unexpected', 'lease-unexpected', logger)).rejects.toThrow(
+          'Something unexpected'
         );
 
         expect(loggerErrorSpy).toHaveBeenCalledWith(
-          'Error fetching template',
+          'Unexpected error resolving template',
           expect.objectContaining({
             event: 'FETCH',
-            errorType: 'TemplateFetchError',
-            statusCode: 403,
+            leaseId: 'lease-unexpected',
+            templateName: 'unexpected',
+            error: 'Something unexpected',
+            errorType: 'Error',
           })
         );
-      });
-    });
-
-    describe('when template fetch times out', () => {
-      it('should throw error and log as error', async () => {
-        const mockUrl = 'https://raw.githubusercontent.com/test/repo/main/template.yaml';
-        const timeoutError = new TemplateFetchError(
-          'Request timed out after 5000ms',
-          undefined,
-          mockUrl
-        );
-
-        vi.spyOn(githubUrl, 'buildTemplateUrl').mockReturnValue(mockUrl);
-        vi.spyOn(templateFetcher, 'fetchTemplate').mockRejectedValue(timeoutError);
-
-        await expect(handleTemplate('timeout-template', 'lease-mno', logger)).rejects.toThrow(
-          TemplateFetchError
-        );
-
-        expect(loggerErrorSpy).toHaveBeenCalledWith(
-          'Error fetching template',
-          expect.objectContaining({
-            event: 'FETCH',
-            leaseId: 'lease-mno',
-            templateName: 'timeout-template',
-            error: 'Request timed out after 5000ms',
-            errorType: 'TemplateFetchError',
-            statusCode: undefined,
-          })
-        );
-      });
-    });
-
-    describe('when template fetch fails with network error', () => {
-      it('should throw error and log as error', async () => {
-        const mockUrl = 'https://raw.githubusercontent.com/test/repo/main/template.yaml';
-        const networkError = new TemplateFetchError(
-          'Network error: Connection refused',
-          undefined,
-          mockUrl
-        );
-
-        vi.spyOn(githubUrl, 'buildTemplateUrl').mockReturnValue(mockUrl);
-        vi.spyOn(templateFetcher, 'fetchTemplate').mockRejectedValue(networkError);
-
-        await expect(handleTemplate('network-error-template', 'lease-pqr', logger)).rejects.toThrow(
-          TemplateFetchError
-        );
-
-        expect(loggerErrorSpy).toHaveBeenCalledWith(
-          'Error fetching template',
-          expect.objectContaining({
-            event: 'FETCH',
-            error: 'Network error: Connection refused',
-            errorType: 'TemplateFetchError',
-          })
-        );
-      });
-    });
-
-    describe('when template fetch fails with unknown error', () => {
-      it('should throw error and log as error with UnknownError type', async () => {
-        const mockUrl = 'https://raw.githubusercontent.com/test/repo/main/template.yaml';
-        const unknownError = new Error('Something unexpected happened');
-
-        vi.spyOn(githubUrl, 'buildTemplateUrl').mockReturnValue(mockUrl);
-        vi.spyOn(templateFetcher, 'fetchTemplate').mockRejectedValue(unknownError);
-
-        await expect(handleTemplate('unknown-error-template', 'lease-stu', logger)).rejects.toThrow(
-          Error
-        );
-
-        expect(loggerErrorSpy).toHaveBeenCalledWith(
-          'Error fetching template',
-          expect.objectContaining({
-            event: 'FETCH',
-            leaseId: 'lease-stu',
-            templateName: 'unknown-error-template',
-            error: 'Something unexpected happened',
-            errorType: 'UnknownError',
-            statusCode: undefined,
-          })
-        );
-      });
-    });
-
-    describe('when template fetch fails with non-Error object', () => {
-      it('should handle string errors gracefully', async () => {
-        const mockUrl = 'https://raw.githubusercontent.com/test/repo/main/template.yaml';
-
-        vi.spyOn(githubUrl, 'buildTemplateUrl').mockReturnValue(mockUrl);
-        vi.spyOn(templateFetcher, 'fetchTemplate').mockRejectedValue('string error');
-
-        await expect(handleTemplate('string-error-template', 'lease-vwx', logger)).rejects.toBe(
-          'string error'
-        );
-
-        expect(loggerErrorSpy).toHaveBeenCalledWith(
-          'Error fetching template',
-          expect.objectContaining({
-            event: 'FETCH',
-            error: 'string error',
-            errorType: 'UnknownError',
-          })
-        );
-      });
-    });
-
-    describe('when template name has special characters', () => {
-      it('should handle template names with hyphens and underscores', async () => {
-        const mockTemplate = 'AWSTemplateFormatVersion: "2010-09-09"';
-        const mockUrl = 'https://raw.githubusercontent.com/test/repo/main/my-special_template.yaml';
-
-        vi.spyOn(githubUrl, 'buildTemplateUrl').mockReturnValue(mockUrl);
-        vi.spyOn(templateFetcher, 'fetchTemplate').mockResolvedValue(mockTemplate);
-
-        const result = await handleTemplate('my-special_template', 'lease-yz1', logger);
-
-        expect(result.skip).toBe(false);
-        expect(result.template).toBe(mockTemplate);
       });
     });
 
@@ -324,9 +336,11 @@ Resources:
 
         loggerSetContextSpy.mockClear();
 
-        const mockTemplate = 'template content';
-        vi.spyOn(githubUrl, 'buildTemplateUrl').mockReturnValue('http://example.com');
-        vi.spyOn(templateFetcher, 'fetchTemplate').mockResolvedValue(mockTemplate);
+        vi.mocked(templateResolver.resolveTemplate).mockResolvedValue({
+          templateBody: 'template',
+          source: 'cloudformation',
+          synthesized: false,
+        });
 
         await handleTemplate('valid-template', 'lease-context-2', logger);
         expect(loggerSetContextSpy).toHaveBeenCalledWith({ correlationId: 'lease-context-2' });
@@ -335,17 +349,18 @@ Resources:
 
     describe('edge cases', () => {
       it('should handle empty template content', async () => {
-        const mockUrl = 'https://raw.githubusercontent.com/test/repo/main/empty.yaml';
-
-        vi.spyOn(githubUrl, 'buildTemplateUrl').mockReturnValue(mockUrl);
-        vi.spyOn(templateFetcher, 'fetchTemplate').mockResolvedValue('');
+        vi.mocked(templateResolver.resolveTemplate).mockResolvedValue({
+          templateBody: '',
+          source: 'cloudformation',
+          synthesized: false,
+        });
 
         const result = await handleTemplate('empty-template', 'lease-empty', logger);
 
         expect(result.skip).toBe(false);
         expect(result.template).toBe('');
         expect(loggerInfoSpy).toHaveBeenCalledWith(
-          'Template fetched successfully',
+          'Template resolved successfully',
           expect.objectContaining({
             templateSize: 0,
           })
@@ -354,17 +369,19 @@ Resources:
 
       it('should handle very large templates', async () => {
         const largeTemplate = 'x'.repeat(100000);
-        const mockUrl = 'https://raw.githubusercontent.com/test/repo/main/large.yaml';
 
-        vi.spyOn(githubUrl, 'buildTemplateUrl').mockReturnValue(mockUrl);
-        vi.spyOn(templateFetcher, 'fetchTemplate').mockResolvedValue(largeTemplate);
+        vi.mocked(templateResolver.resolveTemplate).mockResolvedValue({
+          templateBody: largeTemplate,
+          source: 'cloudformation',
+          synthesized: false,
+        });
 
         const result = await handleTemplate('large-template', 'lease-large', logger);
 
         expect(result.skip).toBe(false);
         expect(result.template).toBe(largeTemplate);
         expect(loggerInfoSpy).toHaveBeenCalledWith(
-          'Template fetched successfully',
+          'Template resolved successfully',
           expect.objectContaining({
             templateSize: 100000,
           })
@@ -373,23 +390,54 @@ Resources:
     });
 
     describe('integration scenarios', () => {
-      it('should handle complete success workflow', async () => {
+      it('should handle complete CloudFormation success workflow', async () => {
         const mockTemplate = 'AWSTemplateFormatVersion: "2010-09-09"\nResources: {}';
-        const mockUrl = 'https://raw.githubusercontent.com/test/repo/main/scenario.yaml';
 
-        vi.spyOn(githubUrl, 'buildTemplateUrl').mockReturnValue(mockUrl);
-        vi.spyOn(templateFetcher, 'fetchTemplate').mockResolvedValue(mockTemplate);
+        vi.mocked(templateResolver.resolveTemplate).mockResolvedValue({
+          templateBody: mockTemplate,
+          source: 'cloudformation',
+          synthesized: false,
+        });
 
         const result = await handleTemplate('scenario', 'lease-workflow', logger);
 
         expect(result).toEqual({
           skip: false,
           template: mockTemplate,
+          source: 'cloudformation',
+          synthesized: false,
         });
 
         expect(loggerSetContextSpy).toHaveBeenCalledWith({ correlationId: 'lease-workflow' });
         expect(loggerDebugSpy).toHaveBeenCalledTimes(1);
         expect(loggerInfoSpy).toHaveBeenCalledTimes(1);
+        expect(loggerErrorSpy).not.toHaveBeenCalled();
+      });
+
+      it('should handle complete CDK success workflow', async () => {
+        const mockTemplate = '{"Resources":{}}';
+
+        vi.mocked(templateResolver.resolveTemplate).mockResolvedValue({
+          templateBody: mockTemplate,
+          source: 'cdk',
+          synthesized: true,
+        });
+
+        const result = await handleTemplate(
+          'cdk-scenario',
+          'lease-cdk-workflow',
+          logger,
+          '123456789012'
+        );
+
+        expect(result).toEqual({
+          skip: false,
+          template: mockTemplate,
+          source: 'cdk',
+          synthesized: true,
+        });
+
+        expect(loggerSetContextSpy).toHaveBeenCalledWith({ correlationId: 'lease-cdk-workflow' });
         expect(loggerErrorSpy).not.toHaveBeenCalled();
       });
 
@@ -407,12 +455,8 @@ Resources:
         expect(loggerErrorSpy).not.toHaveBeenCalled();
       });
 
-      it('should handle complete no-op workflow for 404 template', async () => {
-        const mockUrl = 'https://raw.githubusercontent.com/test/repo/main/missing.yaml';
-        const notFoundError = new TemplateFetchError('HTTP 404: Not Found', 404, mockUrl);
-
-        vi.spyOn(githubUrl, 'buildTemplateUrl').mockReturnValue(mockUrl);
-        vi.spyOn(templateFetcher, 'fetchTemplate').mockRejectedValue(notFoundError);
+      it('should handle complete no-op workflow for missing template', async () => {
+        vi.mocked(templateResolver.resolveTemplate).mockResolvedValue(null);
 
         const result = await handleTemplate('missing', 'lease-404-workflow', logger);
 
@@ -424,7 +468,7 @@ Resources:
         expect(loggerSetContextSpy).toHaveBeenCalledWith({ correlationId: 'lease-404-workflow' });
         expect(loggerDebugSpy).toHaveBeenCalledTimes(1);
         expect(loggerInfoSpy).toHaveBeenCalledTimes(1);
-        expect(loggerErrorSpy).not.toHaveBeenCalled(); // Critical: 404 is NOT an error
+        expect(loggerErrorSpy).not.toHaveBeenCalled();
       });
     });
   });

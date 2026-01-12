@@ -1,0 +1,30 @@
+{
+  "name": "isb-deployer-infrastructure",
+  "version": "1.0.0",
+  "description": "CDK infrastructure for Innovation Sandbox Deployer",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w",
+    "cdk": "cdk",
+    "synth": "cdk synth",
+    "deploy": "cdk deploy",
+    "diff": "cdk diff",
+    "lint": "eslint . --ext .ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "aws-cdk": "^2.180.0",
+    "tsx": "^4.21.0",
+    "typescript": "~5.4.0"
+  },
+  "dependencies": {
+    "aws-cdk-lib": "^2.180.0",
+    "constructs": "^10.3.0"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}
