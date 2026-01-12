@@ -6,7 +6,7 @@
   "main": "dist/handler.js",
   "scripts": {
     "build": "esbuild src/handler.ts --bundle --platform=node --target=node22 --outdir=dist --format=cjs --external:@aws-sdk/*",
-    "build:prod": "npm run build -- --minify",
+    "build:prod": "npm run build -- --minify && mkdir -p dist/templates && cp -r src/templates/* dist/templates/",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
