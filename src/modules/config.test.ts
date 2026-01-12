@@ -44,6 +44,7 @@ describe('config module', () => {
         leaseTableName: 'test-lease-table',
         targetRoleName: DEFAULTS.TARGET_ROLE_NAME,
         awsRegion: DEFAULTS.AWS_REGION,
+        deployRegion: DEFAULTS.DEPLOY_REGION,
         eventSource: DEFAULTS.EVENT_SOURCE,
         logLevel: DEFAULTS.LOG_LEVEL,
       });
@@ -56,6 +57,7 @@ describe('config module', () => {
       process.env.GITHUB_PATH = 'templates';
       process.env.TARGET_ROLE_NAME = 'CustomRole';
       process.env.AWS_REGION = 'us-west-2';
+      process.env.DEPLOY_REGION = 'eu-west-1';
       process.env.EVENT_SOURCE = 'custom-source';
       process.env.LOG_LEVEL = 'DEBUG';
 
@@ -68,6 +70,7 @@ describe('config module', () => {
         leaseTableName: 'custom-lease-table',
         targetRoleName: 'CustomRole',
         awsRegion: 'us-west-2',
+        deployRegion: 'eu-west-1',
         eventSource: 'custom-source',
         logLevel: 'DEBUG',
       });
@@ -137,6 +140,7 @@ describe('config module', () => {
       expect(DEFAULTS.GITHUB_PATH).toBe('cloudformation/scenarios');
       expect(DEFAULTS.TARGET_ROLE_NAME).toBe('InnovationSandbox-ndx-DeployerRole');
       expect(DEFAULTS.AWS_REGION).toBe('us-west-2');
+      expect(DEFAULTS.DEPLOY_REGION).toBe('us-east-1');
       expect(DEFAULTS.EVENT_SOURCE).toBe('innovation-sandbox');
       expect(DEFAULTS.LOG_LEVEL).toBe('INFO');
     });

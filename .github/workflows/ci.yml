@@ -1,10 +1,24 @@
-name: CI
+name: CI/CD Pipeline
 
 on:
   push:
-    branches: [main, master]
+    branches: [main]
   pull_request:
-    branches: [main, master]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: false
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - prod
+
+env:
+  AWS_REGION: us-west-2  # Lambda and ISB run in us-west-2
+  NODE_VERSION: '22'
 
 permissions:
   contents: read
@@ -20,7 +34,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
 
       - name: Install dependencies
@@ -42,7 +56,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
 
       - name: Install dependencies
@@ -61,7 +75,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
 
       - name: Install dependencies
@@ -86,9 +100,11 @@ jobs:
           retention-days: 7
 
   build:
-    name: Build
-    runs-on: ubuntu-latest
+    name: Build Container
     needs: [lint, typecheck, test]
+    runs-on: ubuntu-latest
+    outputs:
+      image_tag: ${{ github.sha }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -96,27 +112,47 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Build Lambda bundle
+      - name: Build Lambda handler
         run: npm run build:prod
 
-      - name: Upload build artifact
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Set up QEMU for ARM64 builds
+        uses: docker/setup-qemu-action@v3
+
+      - name: Build container image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: infrastructure/docker/Dockerfile
+          platforms: linux/arm64
+          push: false
+          tags: |
+            isb-deployer:${{ github.sha }}
+            isb-deployer:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          outputs: type=docker,dest=/tmp/image.tar
+
+      - name: Upload image artifact
         uses: actions/upload-artifact@v4
         with:
-          name: lambda-bundle
-          path: dist/
-          retention-days: 7
+          name: container-image
+          path: /tmp/image.tar
+          retention-days: 1
 
   deploy:
-    name: Deploy
-    runs-on: ubuntu-latest
+    name: Deploy to AWS
     needs: [build]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
     environment: production
     permissions:
       contents: read
@@ -125,57 +161,75 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Download image artifact
+        uses: actions/download-artifact@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          name: container-image
+          path: /tmp
 
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build Lambda bundle
-        run: npm run build:prod
+      - name: Load Docker image
+        run: docker load --input /tmp/image.tar
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
-          aws-region: ${{ vars.AWS_REGION || 'us-west-2' }}
+          aws-region: ${{ env.AWS_REGION }}
 
-      - name: Package Lambda function
-        run: |
-          cd dist
-          zip -r ../lambda-function.zip .
-          cd ..
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Upload Lambda to S3
+      - name: Tag and push image to ECR
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: isb-deployer-dev
+          IMAGE_TAG: ${{ github.sha }}
         run: |
-          aws s3 cp lambda-function.zip s3://${{ vars.ARTIFACT_BUCKET }}/lambda/handler.zip
+          # Tag for ECR with SHA and latest
+          docker tag isb-deployer:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker tag isb-deployer:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
 
-      - name: Deploy CloudFormation stack
-        run: |
-          aws cloudformation deploy \
-            --template-file infrastructure/template.yaml \
-            --stack-name isb-deployer \
-            --parameter-overrides \
-              Environment=prod \
-              CreateLeaseTable=false \
-              CreateArtifactBucket=false \
-              LeaseTableName=${{ vars.LEASE_TABLE_NAME }} \
-              ArtifactBucket=${{ vars.ARTIFACT_BUCKET }} \
-              ArtifactKey=lambda/handler.zip \
-              TargetRoleName=${{ vars.TARGET_ROLE_NAME || 'InnovationSandbox-ndx-DeployerRole' }} \
-              GithubRepo=${{ vars.GITHUB_REPO || 'co-cddo/ndx_try_aws_scenarios' }} \
-              GithubBranch=${{ vars.GITHUB_BRANCH || 'main' }} \
-              GithubPath=${{ vars.GITHUB_PATH || 'cloudformation/scenarios' }} \
-            --capabilities CAPABILITY_NAMED_IAM \
-            --no-fail-on-empty-changeset
+          # Push to ECR
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
 
-      - name: Update Lambda function code
+          echo "### Container Image Pushed :whale:" >> $GITHUB_STEP_SUMMARY
+          echo "- **Registry:** $ECR_REGISTRY" >> $GITHUB_STEP_SUMMARY
+          echo "- **Repository:** $ECR_REPOSITORY" >> $GITHUB_STEP_SUMMARY
+          echo "- **Tag:** $IMAGE_TAG" >> $GITHUB_STEP_SUMMARY
+
+      - name: Setup Node.js for CDK
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install CDK dependencies
+        working-directory: infrastructure/cdk
+        run: npm ci
+
+      - name: CDK Diff
+        working-directory: infrastructure/cdk
+        run: npx cdk diff DeployerStack -c imageTag=${{ github.sha }} -c environment=dev || true
+
+      - name: Deploy CDK Stack
+        working-directory: infrastructure/cdk
         run: |
-          aws lambda update-function-code \
-            --function-name isb-deployer-prod \
-            --s3-bucket ${{ vars.ARTIFACT_BUCKET }} \
-            --s3-key lambda/handler.zip \
-            --publish
+          npx cdk deploy DeployerStack \
+            --require-approval never \
+            -c imageTag=${{ github.sha }} \
+            -c environment=dev
+
+      - name: Wait for Lambda update
+        run: |
+          aws lambda wait function-updated-v2 \
+            --function-name isb-deployer-dev
+
+      - name: Deployment summary
+        run: |
+          echo "### Deployment Complete! :rocket:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Function:** isb-deployer-dev" >> $GITHUB_STEP_SUMMARY
+          echo "- **Image Tag:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Region:** ${{ env.AWS_REGION }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **CDK Stack:** isb-deployer-dev" >> $GITHUB_STEP_SUMMARY

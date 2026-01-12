@@ -2,22 +2,91 @@
 
 [![CI](https://github.com/co-cddo/innovation-sandbox-on-aws-deployer/workflows/CI/badge.svg)](https://github.com/co-cddo/innovation-sandbox-on-aws-deployer/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Node.js Version](https://img.shields.io/badge/node-%3E%3D20.0.0-brightgreen)](https://nodejs.org)
+[![Node.js Version](https://img.shields.io/badge/node-%3E%3D22.0.0-brightgreen)](https://nodejs.org)
 
-AWS Lambda function that automatically deploys CloudFormation templates to Innovation Sandbox sub-accounts when leases are approved. This serverless solution listens for "LeaseApproved" events from EventBridge and orchestrates cross-account CloudFormation stack deployments with parameter enrichment from DynamoDB.
+AWS Lambda function that automatically deploys CloudFormation templates and CDK applications to Innovation Sandbox sub-accounts when leases are approved. This serverless solution listens for "LeaseApproved" events from EventBridge and orchestrates cross-account CloudFormation stack deployments with parameter enrichment from DynamoDB.
 
 ## Overview
 
 The Innovation Sandbox Deployer automates the provisioning of AWS resources in sandbox sub-accounts by:
 
 1. Listening for lease approval events via EventBridge
-2. Fetching CloudFormation templates from GitHub
-3. Enriching deployment parameters from DynamoDB lease data
-4. Assuming cross-account IAM roles via STS
-5. Deploying CloudFormation stacks in target accounts
-6. Emitting success/failure events back to EventBridge
+2. **Auto-detecting scenario type** (CDK or CloudFormation) from the GitHub repository
+3. For **CDK scenarios**: Fetching, synthesizing, and deploying the generated CloudFormation template
+4. For **CloudFormation scenarios**: Fetching and deploying templates directly
+5. Enriching deployment parameters from DynamoDB lease data
+6. Assuming cross-account IAM roles via STS
+7. Deploying CloudFormation stacks in target accounts
+8. Emitting success/failure events back to EventBridge
 
 This enables a fully automated, event-driven infrastructure provisioning workflow for Innovation Sandbox environments.
+
+## CDK Scenario Support
+
+The deployer now supports CDK (Cloud Development Kit) scenarios in addition to raw CloudFormation templates. CDK scenarios are automatically detected and synthesized at deployment time.
+
+### How CDK Detection Works
+
+When a lease is approved with a `templateName`, the deployer:
+
+1. **Queries GitHub API** to check for `cdk.json` file presence
+2. **Detects scenario type**:
+   - `cdk`: CDK project at scenario root (has `cdk.json` in scenario folder)
+   - `cdk-subfolder`: CDK project in `/cdk` subdirectory
+   - `cloudformation`: Traditional CloudFormation template
+
+### CDK Synthesis Process
+
+For CDK scenarios, the deployer:
+
+1. **Sparse clones** the scenario folder from GitHub (efficient, only fetches needed files)
+2. **Installs dependencies** using `npm ci --ignore-scripts` (secure, no postinstall scripts)
+3. **Detects CDK version** from `package.json` and installs matching CLI
+4. **Synthesizes** the CDK app to CloudFormation using `cdk synth`
+5. **Deploys** the generated template to the target account
+
+### CDK Scenario Structure
+
+CDK scenarios should be structured as:
+
+```
+scenarios/
+└── my-cdk-scenario/
+    ├── cdk.json              # CDK configuration
+    ├── package.json          # Dependencies including aws-cdk-lib
+    ├── package-lock.json     # Lockfile for reproducible builds
+    ├── tsconfig.json         # TypeScript configuration
+    └── lib/
+        └── my-stack.ts       # CDK stack definition
+```
+
+Or with a CDK subfolder:
+
+```
+scenarios/
+└── my-hybrid-scenario/
+    ├── README.md             # Documentation
+    ├── sample-data/          # Sample data files
+    └── cdk/                  # CDK project in subfolder
+        ├── cdk.json
+        ├── package.json
+        └── lib/
+            └── stack.ts
+```
+
+### CDK Requirements
+
+- **Single stack only**: CDK apps must produce exactly one CloudFormation stack
+- **No asset publishing**: Assets (S3/ECR) are not supported; use inline resources
+- **Node.js compatible**: Must work with Node.js 22.x runtime
+- **TypeScript or JavaScript**: Both are supported
+
+### Environment Variables for CDK
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `GITHUB_TOKEN_SECRET_ARN` | For private repos | - | ARN of Secrets Manager secret containing GitHub PAT |
+| `GITHUB_TOKEN` | For local dev | - | GitHub token (use secret ARN in production) |
 
 ## Architecture
 
@@ -92,7 +161,7 @@ Event Flow:
 Before deploying this solution, ensure you have:
 
 - **AWS Account**: Source account for Lambda and EventBridge
-- **Node.js**: Version 20.0.0 or higher
+- **Node.js**: Version 22.0.0 or higher
 - **AWS CLI**: Configured with appropriate credentials
 - **IAM Permissions**: Ability to create Lambda, IAM roles, and EventBridge rules
 - **DynamoDB Table**: Existing table for lease data (e.g., `isb-leases`)
@@ -219,7 +288,7 @@ docker run -p 9000:8080 \
   -e AWS_REGION \
   -e LOG_LEVEL \
   -v $PWD/dist:/var/task \
-  public.ecr.aws/lambda/nodejs:20 \
+  public.ecr.aws/lambda/nodejs:22 \
   handler.handler
 ```
 

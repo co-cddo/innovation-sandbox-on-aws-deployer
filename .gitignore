@@ -31,4 +31,10 @@ npm-debug.log*
 
 # Lambda deployment artifacts
 *.zip
+
+# CDK
+infrastructure/cdk/cdk.context.json
+infrastructure/cdk/cdk.out/
+
+# Claude settings
 .claude/settings.local.json
