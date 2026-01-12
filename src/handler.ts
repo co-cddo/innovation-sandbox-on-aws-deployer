@@ -32,11 +32,7 @@ import {
 } from './modules/deployment-events.js';
 import { ensureBootstrapped } from './modules/cdk-bootstrapper.js';
 import { DeployerError, ErrorCode } from './modules/errors.js';
-import {
-  createMetricsCollector,
-  recordInvocationStart,
-  MetricName,
-} from './modules/metrics.js';
+import { createMetricsCollector, recordInvocationStart, MetricName } from './modules/metrics.js';
 
 /**
  * Lambda handler response type

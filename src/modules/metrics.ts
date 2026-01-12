@@ -124,7 +124,11 @@ export class MetricsCollector {
    * @param startTime - Start time from startTimer()
    * @param dimensions - Optional additional dimensions
    */
-  recordDuration(name: MetricName, startTime: number, dimensions?: Partial<MetricDimensions>): void {
+  recordDuration(
+    name: MetricName,
+    startTime: number,
+    dimensions?: Partial<MetricDimensions>
+  ): void {
     const duration = Date.now() - startTime;
     this.record(name, duration, 'Milliseconds', dimensions);
   }
@@ -207,13 +211,16 @@ export class MetricsCollector {
       const parts = key.split(':');
       const name = parts[0] ?? key;
       emfPayload[name] = value;
-      (emfPayload._aws as { CloudWatchMetrics: [{ Metrics: EMFMetric[] }] }).CloudWatchMetrics[0].Metrics.push({
+      (
+        emfPayload._aws as { CloudWatchMetrics: [{ Metrics: EMFMetric[] }] }
+      ).CloudWatchMetrics[0].Metrics.push({
         Name: name,
         Unit: unit,
       });
     }
 
     // Output EMF to stdout (CloudWatch Logs will parse it)
+    // eslint-disable-next-line no-console -- EMF format requires stdout for CloudWatch parsing
     console.log(JSON.stringify(emfPayload));
 
     // Clear metrics after flush

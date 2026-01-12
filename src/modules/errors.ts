@@ -170,7 +170,10 @@ export const DEFAULT_RETRY_CONFIG: RetryConfig = {
  * @param config - Retry configuration
  * @returns Delay in milliseconds
  */
-export function calculateBackoff(attempt: number, config: RetryConfig = DEFAULT_RETRY_CONFIG): number {
+export function calculateBackoff(
+  attempt: number,
+  config: RetryConfig = DEFAULT_RETRY_CONFIG
+): number {
   // Exponential backoff: baseDelay * 2^attempt
   const exponentialDelay = config.baseDelayMs * Math.pow(2, attempt);
 
@@ -215,7 +218,8 @@ export async function withRetry<T>(
   config: RetryConfig = DEFAULT_RETRY_CONFIG,
   shouldRetry?: (error: Error) => boolean
 ): Promise<T> {
-  const isRetryable = shouldRetry ?? ((error: Error) => error instanceof DeployerError && error.isRetryable);
+  const isRetryable =
+    shouldRetry ?? ((error: Error): boolean => error instanceof DeployerError && error.isRetryable);
 
   let lastError: Error | undefined;
 

@@ -302,10 +302,7 @@ describe('template-ref-parser module', () => {
     });
 
     it('should handle complex branch override', () => {
-      const result = resolveEffectiveBranch(
-        { name: 'app', branch: 'feature/new-feature' },
-        'main'
-      );
+      const result = resolveEffectiveBranch({ name: 'app', branch: 'feature/new-feature' }, 'main');
       expect(result).toBe('feature/new-feature');
     });
   });
