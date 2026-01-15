@@ -48,7 +48,7 @@
     "@aws-sdk/client-eventbridge": "^3.966.0",
     "@aws-sdk/client-secrets-manager": "^3.966.0",
     "@aws-sdk/client-ssm": "^3.966.0",
-    "@aws-sdk/client-sts": "^3.460.0",
+    "@aws-sdk/client-sts": "^3.969.0",
     "@aws-sdk/lib-dynamodb": "^3.460.0",
     "js-yaml": "^4.1.1"
   }
