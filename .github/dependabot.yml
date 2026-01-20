@@ -4,8 +4,22 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    groups:
+      minor-and-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
 
   - package-ecosystem: "npm"
     directory: "/infrastructure/cdk"
     schedule:
       interval: "weekly"
+    groups:
+      minor-and-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
