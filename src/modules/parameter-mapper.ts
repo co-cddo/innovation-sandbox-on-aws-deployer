@@ -127,7 +127,13 @@ export function mapParameters(
     }
 
     // Convert value to string (CloudFormation parameters are always strings)
-    const stringValue = String(value);
+    // Handle primitives explicitly for type safety
+    const stringValue =
+      typeof value === 'string'
+        ? value
+        : typeof value === 'number' || typeof value === 'boolean'
+          ? String(value)
+          : JSON.stringify(value);
 
     parameters.push({
       ParameterKey: parameterName,
