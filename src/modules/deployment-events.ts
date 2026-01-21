@@ -116,7 +116,7 @@ export async function emitDeploymentSuccess(
       });
     } else {
       // Fallback to console.error if no logger provided
-      // eslint-disable-next-line no-console
+
       console.error(
         JSON.stringify({
           level: 'ERROR',
@@ -304,7 +304,7 @@ export async function emitDeploymentFailure(
       });
     } else {
       // Fallback to console.error if no logger provided
-      // eslint-disable-next-line no-console
+
       console.error(
         JSON.stringify({
           level: 'ERROR',
