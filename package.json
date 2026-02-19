@@ -31,7 +31,7 @@
   },
   "devDependencies": {
     "@types/js-yaml": "^4.0.9",
-    "@types/node": "^25.2.3",
+    "@types/node": "^25.3.0",
     "@typescript-eslint/eslint-plugin": "^8.56.0",
     "@typescript-eslint/parser": "^8.56.0",
     "@vitest/coverage-v8": "^4.0.18",
@@ -45,13 +45,13 @@
     "vitest": "^4.0.17"
   },
   "dependencies": {
-    "@aws-sdk/client-cloudformation": "^3.988.0",
-    "@aws-sdk/client-dynamodb": "^3.988.0",
-    "@aws-sdk/client-eventbridge": "^3.988.0",
-    "@aws-sdk/client-secrets-manager": "^3.988.0",
-    "@aws-sdk/client-ssm": "^3.988.0",
-    "@aws-sdk/client-sts": "^3.988.0",
-    "@aws-sdk/lib-dynamodb": "^3.988.0",
+    "@aws-sdk/client-cloudformation": "^3.993.0",
+    "@aws-sdk/client-dynamodb": "^3.993.0",
+    "@aws-sdk/client-eventbridge": "^3.993.0",
+    "@aws-sdk/client-secrets-manager": "^3.993.0",
+    "@aws-sdk/client-ssm": "^3.993.0",
+    "@aws-sdk/client-sts": "^3.993.0",
+    "@aws-sdk/lib-dynamodb": "^3.993.0",
     "js-yaml": "^4.1.1"
   }
 }
