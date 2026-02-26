@@ -17,7 +17,7 @@ vi.mock('@co-cddo/isb-client', () => {
 import { createISBClient } from '@co-cddo/isb-client';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const mockModule = await import('@co-cddo/isb-client') as any;
+const mockModule = (await import('@co-cddo/isb-client')) as any;
 const mockFetchLeaseByKey: ReturnType<typeof vi.fn> = mockModule.__mockFetchLeaseByKey;
 
 describe('lease-lookup', () => {
