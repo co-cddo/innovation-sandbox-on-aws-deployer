@@ -22,7 +22,7 @@ const imageTag = app.node.tryGetContext('imageTag') || 'latest';
 
 // Production configuration - deployer runs in us-west-2, deploys to us-east-1
 const config = {
-  isbApiBaseUrl: app.node.tryGetContext('isbApiBaseUrl') || 'https://PLACEHOLDER.execute-api.us-west-2.amazonaws.com/prod',
+  isbApiBaseUrl: app.node.tryGetContext('isbApiBaseUrl') || 'https://1ewlxhaey6.execute-api.us-west-2.amazonaws.com/prod',
   isbJwtSecretPath: app.node.tryGetContext('isbJwtSecretPath') || '/InnovationSandbox/ndx/Auth/JwtSecret',
   githubRepo: 'co-cddo/ndx_try_aws_scenarios',
   githubBranch: 'main',
