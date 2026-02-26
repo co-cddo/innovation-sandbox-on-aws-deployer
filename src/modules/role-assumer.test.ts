@@ -29,7 +29,6 @@ vi.mock('./config.js', async () => {
       githubRepo: 'co-cddo/ndx_try_aws_scenarios',
       githubBranch: 'main',
       githubPath: 'cloudformation/scenarios',
-      leaseTableName: 'test-table',
       eventSource: 'innovation-sandbox',
       logLevel: 'INFO' as const,
     })),

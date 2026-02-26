@@ -11,7 +11,6 @@ describe('scenario-detector module', () => {
     githubRepo: 'test-org/test-repo',
     githubBranch: 'main',
     githubPath: 'scenarios',
-    leaseTableName: 'test-table',
     targetRoleName: 'TestRole',
     awsRegion: 'us-west-2',
     deployRegion: 'us-east-1',

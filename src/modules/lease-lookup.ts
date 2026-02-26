@@ -1,6 +1,4 @@
-import { DynamoDBClient, GetItemCommand } from '@aws-sdk/client-dynamodb';
-import { unmarshall } from '@aws-sdk/util-dynamodb';
-import { getConfig } from './config.js';
+import { createISBClient, type ISBClient } from '@co-cddo/isb-client';
 
 /**
  * Custom error class for lease lookup failures
@@ -20,8 +18,8 @@ export class LeaseLookupError extends Error {
 }
 
 /**
- * Lease details returned from DynamoDB lookup
- * Field names are normalized from ISB's DynamoDB schema to our internal format
+ * Lease details returned from ISB API
+ * Field names are normalized from ISB's API schema to our internal format
  */
 export interface LeaseDetails {
   /** Unique identifier for the lease (uuid in ISB) */
@@ -38,39 +36,43 @@ export interface LeaseDetails {
   expirationDate?: string;
   /** Email address of the user who owns the lease */
   userEmail: string;
-  /** Any additional attributes from DynamoDB */
+  /** Any additional attributes from ISB API */
   [key: string]: unknown;
 }
 
 /**
- * DynamoDB client singleton
+ * ISB client singleton
  */
-let dynamoDBClient: DynamoDBClient | null = null;
+let isbClient: ISBClient | null = null;
 
 /**
- * Gets or creates the DynamoDB client instance
+ * Gets or creates the ISB client instance
  */
-function getDynamoDBClient(): DynamoDBClient {
-  if (!dynamoDBClient) {
-    const config = getConfig();
-    dynamoDBClient = new DynamoDBClient({ region: config.awsRegion });
+function getISBClient(): ISBClient {
+  if (!isbClient) {
+    isbClient = createISBClient({
+      serviceIdentity: {
+        email: 'deployer@innovation-sandbox.local',
+        roles: ['Admin'],
+      },
+    });
   }
-  return dynamoDBClient;
+  return isbClient;
 }
 
 /**
- * Resets the DynamoDB client singleton (for testing)
+ * Resets the ISB client singleton (for testing)
  */
-export function resetDynamoDBClient(): void {
-  dynamoDBClient = null;
+export function resetISBClient(): void {
+  isbClient = null;
 }
 
 /**
- * Looks up a lease in the ISB DynamoDB table using userEmail and leaseId
+ * Looks up a lease via the ISB API using userEmail and leaseId
  *
- * ISB DynamoDB schema uses a composite key:
- * - Partition key: userEmail
- * - Sort key: uuid (the leaseId)
+ * ISB API key lookup uses:
+ * - userEmail (partition key)
+ * - uuid (sort key / leaseId)
  *
  * ISB field names are mapped to our internal format:
  * - awsAccountId → accountId
@@ -80,7 +82,7 @@ export function resetDynamoDBClient(): void {
  * @param userEmail - The email of the user who owns the lease
  * @param leaseId - The unique identifier (uuid) for the lease
  * @returns Lease details including accountId, templateName, and other attributes
- * @throws {LeaseLookupError} If the lease is not found or DynamoDB query fails
+ * @throws {LeaseLookupError} If the lease is not found or API request fails
  *
  * @example
  * ```typescript
@@ -89,48 +91,33 @@ export function resetDynamoDBClient(): void {
  * ```
  */
 export async function lookupLease(userEmail: string, leaseId: string): Promise<LeaseDetails> {
-  const config = getConfig();
-  const client = getDynamoDBClient();
+  const client = getISBClient();
 
   try {
-    // ISB table uses composite key: userEmail (HASH) + uuid (RANGE)
-    const command = new GetItemCommand({
-      TableName: config.leaseTableName,
-      Key: {
-        userEmail: { S: userEmail },
-        uuid: { S: leaseId },
-      },
-    });
+    const result = await client.fetchLeaseByKey(userEmail, leaseId, leaseId);
 
-    const response = await client.send(command);
-
-    // Check if item was found
-    if (!response.Item) {
+    if (!result) {
       throw new LeaseLookupError(`Lease not found: ${leaseId} for user ${userEmail}`);
     }
 
-    // Unmarshall the DynamoDB item to a plain JavaScript object
-    const item = unmarshall(response.Item);
-
-    // Validate that required fields are present (using ISB field names)
-    if (!item.uuid || !item.awsAccountId) {
+    // Validate that required fields are present
+    if (!result.uuid || !result.awsAccountId) {
       throw new LeaseLookupError(
         `Lease ${leaseId} is missing required fields (uuid or awsAccountId)`
       );
     }
 
     // Return the lease details, mapping ISB field names to our internal format
+    // Spread first, then override with mapped fields
     return {
-      // Map ISB fields to our normalized format
-      leaseId: item.uuid as string,
-      accountId: item.awsAccountId as string,
-      templateName: item.originalLeaseTemplateName as string | undefined,
-      budgetAmount: item.maxSpend as number | undefined,
-      status: item.status as string | undefined,
-      expirationDate: item.expirationDate as string | undefined,
-      userEmail: item.userEmail as string,
-      // Include any additional attributes
-      ...item,
+      ...result,
+      leaseId: result.uuid,
+      accountId: result.awsAccountId,
+      templateName: result.originalLeaseTemplateName,
+      budgetAmount: result.maxSpend,
+      status: result.status,
+      expirationDate: result.expirationDate,
+      userEmail: result.userEmail,
     };
   } catch (error) {
     // If already a LeaseLookupError, rethrow
@@ -138,13 +125,13 @@ export async function lookupLease(userEmail: string, leaseId: string): Promise<L
       throw error;
     }
 
-    // Extract error message from AWS SDK error
+    // Extract error message
     const errorMessage = error instanceof Error ? error.message : 'Unknown error looking up lease';
     const errorName = error instanceof Error ? error.name : 'UnknownError';
 
     // Provide descriptive error message
     throw new LeaseLookupError(
-      `Failed to lookup lease ${leaseId} for user ${userEmail} in table ${config.leaseTableName}: ${errorName} - ${errorMessage}`,
+      `Failed to lookup lease ${leaseId} for user ${userEmail}: ${errorName} - ${errorMessage}`,
       error
     );
   }

@@ -45,13 +45,12 @@
     "vitest": "^4.0.17"
   },
   "dependencies": {
+    "@co-cddo/isb-client": "https://github.com/co-cddo/innovation-sandbox-on-aws-client/releases/download/v2.0.0/co-cddo-isb-client-2.0.0.tgz",
     "@aws-sdk/client-cloudformation": "^3.993.0",
-    "@aws-sdk/client-dynamodb": "^3.993.0",
     "@aws-sdk/client-eventbridge": "^3.993.0",
     "@aws-sdk/client-secrets-manager": "^3.993.0",
     "@aws-sdk/client-ssm": "^3.993.0",
     "@aws-sdk/client-sts": "^3.993.0",
-    "@aws-sdk/lib-dynamodb": "^3.993.0",
     "js-yaml": "^4.1.1"
   }
 }

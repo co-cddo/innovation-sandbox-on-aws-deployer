@@ -48,7 +48,6 @@ describe('template-handler module', () => {
     githubRepo: 'test/repo',
     githubBranch: 'main',
     githubPath: 'scenarios',
-    leaseTableName: 'test-table',
     targetRoleName: 'TestRole',
     awsRegion: 'us-east-1',
     eventSource: 'test-source',

@@ -8,8 +8,6 @@ export interface Config {
   githubBranch: string;
   /** Path within the repository to scenario templates */
   githubPath: string;
-  /** DynamoDB table name for lease lookups */
-  leaseTableName: string;
   /** IAM role name to assume in target sub-accounts */
   targetRoleName: string;
   /** AWS region for Lambda operations (e.g., us-west-2) */

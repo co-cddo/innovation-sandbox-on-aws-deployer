@@ -23,7 +23,6 @@ describe('event-emitter module', () => {
     resetConfig();
     resetEventBridgeClient();
     process.env = { ...originalEnv };
-    process.env.LEASE_TABLE_NAME = 'test-table';
 
     // Create a mock send function
     mockSend = vi.fn();
