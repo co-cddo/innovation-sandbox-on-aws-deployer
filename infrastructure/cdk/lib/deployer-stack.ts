@@ -111,6 +111,23 @@ export class DeployerStack extends cdk.Stack {
       })
     );
 
+    // KMS decrypt for the CMK encrypting the ISB JWT secret
+    this.lambdaRole.addToPolicy(
+      new iam.PolicyStatement({
+        sid: 'IsbJwtSecretKmsDecrypt',
+        effect: iam.Effect.ALLOW,
+        actions: ['kms:Decrypt'],
+        resources: [
+          `arn:aws:kms:${cdk.Aws.REGION}:${cdk.Aws.ACCOUNT_ID}:key/*`,
+        ],
+        conditions: {
+          StringEquals: {
+            'kms:ViaService': `secretsmanager.${cdk.Aws.REGION}.amazonaws.com`,
+          },
+        },
+      })
+    );
+
     // STS permissions for ISB double role chain
     // ISB requires: Lambda -> IntermediateRole (hub) -> SandboxAccountRole (target)
     this.lambdaRole.addToPolicy(
