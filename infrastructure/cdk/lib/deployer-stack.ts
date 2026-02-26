@@ -26,10 +26,10 @@ export interface DeployerStackProps extends cdk.StackProps {
   environment: string;
   /** Container image tag to deploy */
   imageTag: string;
-  /** DynamoDB table name for lease lookups */
-  leaseTableName: string;
-  /** AWS region where lease table is located */
-  leaseTableRegion?: string;
+  /** ISB API Gateway base URL for lease lookups */
+  isbApiBaseUrl: string;
+  /** Secrets Manager path for ISB JWT signing secret */
+  isbJwtSecretPath: string;
   /** GitHub repository for scenario templates (owner/repo format) */
   githubRepo: string;
   /** GitHub branch to fetch templates from */
@@ -63,8 +63,8 @@ export class DeployerStack extends cdk.Stack {
     const {
       environment,
       imageTag,
-      leaseTableName,
-      leaseTableRegion,
+      isbApiBaseUrl,
+      isbJwtSecretPath,
       githubRepo,
       githubBranch,
       githubPath,
@@ -74,7 +74,6 @@ export class DeployerStack extends cdk.Stack {
     } = props;
 
     const isProd = environment === 'prod';
-    const tableRegion = leaseTableRegion || cdk.Aws.REGION;
 
     // ECR Repository for Lambda container images
     // Try to import existing repo first, create if doesn't exist
@@ -100,28 +99,15 @@ export class DeployerStack extends cdk.Stack {
       ],
     });
 
-    // DynamoDB read-only access for lease table lookups
+    // Secrets Manager access for ISB JWT signing secret (lease lookup via API Gateway)
     this.lambdaRole.addToPolicy(
       new iam.PolicyStatement({
-        sid: 'DynamoDBReadAccess',
+        sid: 'IsbJwtSecretAccess',
         effect: iam.Effect.ALLOW,
-        actions: ['dynamodb:GetItem', 'dynamodb:Query'],
-        resources: [`arn:aws:dynamodb:${tableRegion}:${cdk.Aws.ACCOUNT_ID}:table/${leaseTableName}`],
-      })
-    );
-
-    // KMS decrypt permission for encrypted DynamoDB table
-    this.lambdaRole.addToPolicy(
-      new iam.PolicyStatement({
-        sid: 'KMSDecryptAccess',
-        effect: iam.Effect.ALLOW,
-        actions: ['kms:Decrypt'],
-        resources: [`arn:aws:kms:${tableRegion}:${cdk.Aws.ACCOUNT_ID}:key/*`],
-        conditions: {
-          StringEquals: {
-            'kms:ViaService': `dynamodb.${tableRegion}.amazonaws.com`,
-          },
-        },
+        actions: ['secretsmanager:GetSecretValue'],
+        resources: [
+          `arn:aws:secretsmanager:${cdk.Aws.REGION}:${cdk.Aws.ACCOUNT_ID}:secret:${isbJwtSecretPath}*`,
+        ],
       })
     );
 
@@ -209,8 +195,8 @@ export class DeployerStack extends cdk.Stack {
       ephemeralStorageSize: cdk.Size.gibibytes(5),
       role: this.lambdaRole,
       environment: {
-        LEASE_TABLE_NAME: leaseTableName,
-        LEASE_TABLE_REGION: tableRegion,
+        ISB_API_BASE_URL: isbApiBaseUrl,
+        ISB_JWT_SECRET_PATH: isbJwtSecretPath,
         DEPLOY_REGION: 'us-east-1', // CloudFormation stacks deploy to us-east-1
         GITHUB_REPO: githubRepo,
         GITHUB_BRANCH: githubBranch,

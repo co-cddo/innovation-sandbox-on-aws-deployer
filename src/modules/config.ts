@@ -86,17 +86,6 @@ export function validateRegion(region: string): void {
 }
 
 /**
- * Gets a required environment variable, throwing if not set
- */
-function getRequiredEnv(name: string): string {
-  const value = process.env[name];
-  if (!value) {
-    throw new Error(`Required environment variable ${name} is not set`);
-  }
-  return value;
-}
-
-/**
  * Gets an optional environment variable with a default value
  */
 function getOptionalEnv(name: string, defaultValue: string): string {
@@ -173,9 +162,6 @@ async function fetchGithubToken(): Promise<string | undefined> {
  *
  * NOTE: This does not include githubToken. Use loadConfigAsync() for full config.
  *
- * Required environment variables:
- * - LEASE_TABLE_NAME: DynamoDB table name for lease lookups
- *
  * Optional environment variables (with defaults):
  * - GITHUB_REPO: Repository for templates (default: co-cddo/ndx_try_aws_scenarios)
  * - GITHUB_BRANCH: Branch to fetch from (default: main)
@@ -193,7 +179,6 @@ export function loadConfig(): Config {
     githubRepo: getOptionalEnv('GITHUB_REPO', DEFAULTS.GITHUB_REPO),
     githubBranch: getOptionalEnv('GITHUB_BRANCH', DEFAULTS.GITHUB_BRANCH),
     githubPath: getOptionalEnv('GITHUB_PATH', DEFAULTS.GITHUB_PATH),
-    leaseTableName: getRequiredEnv('LEASE_TABLE_NAME'),
     targetRoleName: getOptionalEnv('TARGET_ROLE_NAME', DEFAULTS.TARGET_ROLE_NAME),
     awsRegion: getOptionalEnv('AWS_REGION', DEFAULTS.AWS_REGION),
     deployRegion: getOptionalEnv('DEPLOY_REGION', DEFAULTS.DEPLOY_REGION),

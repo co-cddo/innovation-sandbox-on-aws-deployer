@@ -10,7 +10,6 @@ describe('github-url module', () => {
     resetConfig();
     process.env = { ...originalEnv };
     // Set required env var for config
-    process.env.LEASE_TABLE_NAME = 'test-lease-table';
     // Clear GitHub Actions env vars that would override defaults
     delete process.env.GITHUB_PATH;
     delete process.env.GITHUB_REPO;
@@ -42,7 +41,6 @@ describe('github-url module', () => {
 
       it('should use environment variables when set', () => {
         resetConfig();
-        process.env.LEASE_TABLE_NAME = 'test-lease-table';
         process.env.GITHUB_REPO = 'test-org/test-repo';
         process.env.GITHUB_BRANCH = 'develop';
         process.env.GITHUB_PATH = 'templates';
@@ -61,7 +59,6 @@ describe('github-url module', () => {
           githubRepo: 'custom-org/custom-repo',
           githubBranch: 'feature-branch',
           githubPath: 'cfn/templates',
-          leaseTableName: 'custom-table',
           targetRoleName: 'CustomRole',
           awsRegion: 'us-west-2',
           eventSource: 'custom-source',
@@ -80,7 +77,6 @@ describe('github-url module', () => {
           githubRepo: 'override-org/override-repo',
           githubBranch: 'staging',
           githubPath: 'infrastructure',
-          leaseTableName: 'lease-table',
           targetRoleName: 'Role',
           awsRegion: 'us-west-2',
           eventSource: 'source',
@@ -99,7 +95,6 @@ describe('github-url module', () => {
           githubRepo: 'user/repo-with-dashes_and_underscores',
           githubBranch: 'main',
           githubPath: 'templates',
-          leaseTableName: 'table',
           targetRoleName: 'Role',
           awsRegion: 'us-west-2',
           eventSource: 'source',
@@ -169,7 +164,6 @@ describe('github-url module', () => {
           githubRepo: 'org/repo',
           githubBranch: 'v1',
           githubPath: 'cfn',
-          leaseTableName: 'table',
           targetRoleName: 'Role',
           awsRegion: 'us-west-2',
           eventSource: 'source',
@@ -188,7 +182,6 @@ describe('github-url module', () => {
           githubRepo: 'org/repo',
           githubBranch: 'release/v2.5.3-beta',
           githubPath: 'templates',
-          leaseTableName: 'table',
           targetRoleName: 'Role',
           awsRegion: 'us-west-2',
           eventSource: 'source',
@@ -205,7 +198,6 @@ describe('github-url module', () => {
           githubRepo: 'org/repo',
           githubBranch: 'main',
           githubPath: 'infrastructure/cloudformation/templates',
-          leaseTableName: 'table',
           targetRoleName: 'Role',
           awsRegion: 'us-west-2',
           eventSource: 'source',
@@ -224,7 +216,6 @@ describe('github-url module', () => {
           githubRepo: 'org/repo',
           githubBranch: 'main',
           githubPath: 'templates',
-          leaseTableName: 'table',
           targetRoleName: 'Role',
           awsRegion: 'us-west-2',
           eventSource: 'source',
@@ -304,7 +295,6 @@ describe('github-url module', () => {
           githubRepo: 'owner/repo',
           githubBranch: 'branch',
           githubPath: 'path',
-          leaseTableName: 'table',
           targetRoleName: 'Role',
           awsRegion: 'us-west-2',
           eventSource: 'source',

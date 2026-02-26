@@ -22,8 +22,8 @@ const imageTag = app.node.tryGetContext('imageTag') || 'latest';
 
 // Production configuration - deployer runs in us-west-2, deploys to us-east-1
 const config = {
-  leaseTableName: 'ndx-try-isb-data-LeaseTable473C6DF2-1RC3238PVASE1',
-  leaseTableRegion: 'us-west-2',
+  isbApiBaseUrl: app.node.tryGetContext('isbApiBaseUrl') || 'https://PLACEHOLDER.execute-api.us-west-2.amazonaws.com/prod',
+  isbJwtSecretPath: app.node.tryGetContext('isbJwtSecretPath') || '/InnovationSandbox/ndx/Auth/JwtSecret',
   githubRepo: 'co-cddo/ndx_try_aws_scenarios',
   githubBranch: 'main',
   githubPath: 'cloudformation/scenarios',
@@ -62,8 +62,8 @@ new DeployerStack(app, 'DeployerStack', {
   description: 'Innovation Sandbox Deployer Lambda and EventBridge infrastructure',
   environment: 'prod',
   imageTag,
-  leaseTableName: config.leaseTableName,
-  leaseTableRegion: config.leaseTableRegion,
+  isbApiBaseUrl: config.isbApiBaseUrl,
+  isbJwtSecretPath: config.isbJwtSecretPath,
   githubRepo: config.githubRepo,
   githubBranch: config.githubBranch,
   githubPath: config.githubPath,
